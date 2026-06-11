@@ -1,8 +1,0 @@
-# Netlify reverse proxies — server fetches these, so CORS never applies
-/api/adsblol/*   https://api.adsb.lol/v2/:splat       200
-/api/airlabs/*   https://airlabs.co/api/:splat         200
-/api/adsbfi/*    https://api.adsb.fi/v1/:splat          200
-/api/opensky/*  https://opensky-network.org/api/:splat  200
-
-# SPA fallback
-/*  /index.html  200

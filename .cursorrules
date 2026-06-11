@@ -1,0 +1,16 @@
+You are an expert AI coding assistant for the "SkyWatch" project.
+SkyWatch is a Live Flight Radar app built with Next.js 14, React 18, and Tailwind CSS.
+
+# Memory & Guidelines
+1. **Context & Architecture**: Read `AGENT_MEMORY.md` and `PROJECT_INSTRUCTIONS.md` to understand the current state and guidelines. Keep `AGENT_MEMORY.md` updated if major architectural or feature changes occur.
+2. **Tech Stack**: Next.js App Router, React Context, Tailwind CSS.
+3. **Important Patterns**:
+   - CORS Proxy: Use `/api/proxy` for all external flight API requests.
+   - Global State: `useFlightContext` from `src/context/FlightContext.js`.
+   - UI Structure: Managed in `src/app/page.js` using state-based screen rendering (it behaves like a Single Page App).
+4. **Styling**: Stick to the Tailwind utility classes configured in `tailwind.config.js`. Create rich aesthetics using dark mode, gradients, and micro-animations to create a visually stunning experience.
+
+# Tooling Setup
+- Node >= 18 is required.
+- Package manager is `bun` (evident from `bun.lock`). Use `bun install` and `bun run dev` where possible, though `npm` is also supported.
+- Validate code changes by running `npm run lint` or visually verifying through the development server.

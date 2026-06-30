@@ -1,10 +1,37 @@
 'use client';
 
+import { useState } from 'react';
 import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
 
 export default function SettingsScreen({ onShowToast }) {
-  const { state, setApiKey, setEnabledAPIs, setRadius, setRefreshInterval } = useFlightContext();
+  const { state, setApiKey, setEnabledAPIs, setRadius, setRefreshInterval, updateGlobalSettings } = useFlightContext();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleLogin = async () => {
+    if (!adminPassword) return;
+    setIsAuthenticating(true);
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      if (res.ok) {
+        setIsAuthenticated(true);
+        onShowToast('Admin access granted');
+      } else {
+        onShowToast('Invalid password');
+      }
+    } catch (err) {
+      onShowToast('Authentication failed');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   const toggleApi = (key) => {
     setEnabledAPIs({
@@ -13,6 +40,52 @@ export default function SettingsScreen({ onShowToast }) {
     });
     onShowToast(`${key} ${state.enabledAPIs[key] ? 'disabled' : 'enabled'}`);
   };
+
+  const handleAdminSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateGlobalSettings({
+        radius: state.radius,
+        refreshInterval: state.refreshInterval,
+        enabledAPIs: state.enabledAPIs,
+        apiKeys: state.apiKeys,
+      }, adminPassword);
+      onShowToast('Global settings updated successfully!');
+    } catch (err) {
+      onShowToast(err.message || 'Failed to update global settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header title="SETTINGS" subtitle="ADMIN ACCESS REQUIRED" />
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="bg-panel border border-cyan/30 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <div className="font-mono font-bold text-lg text-cyan mb-2 text-center">🛡️ Admin Login</div>
+            <p className="text-sm text-tdim mb-6 text-center">Please enter the admin password to access settings.</p>
+            <input 
+              type="password"
+              placeholder="Password"
+              className="w-full bg-bg border border-cyan/20 rounded-lg px-4 py-3 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            <button 
+              onClick={handleLogin}
+              disabled={isAuthenticating}
+              className="w-full bg-cyan text-bg font-bold px-4 py-3 rounded-lg font-mono text-sm hover:bg-cyan/90 disabled:opacity-50 transition-colors"
+            >
+              {isAuthenticating ? 'VERIFYING...' : 'UNLOCK SETTINGS'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -93,37 +166,50 @@ export default function SettingsScreen({ onShowToast }) {
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔑 API KEYS</div>
           <div className="space-y-3">
             <div className="bg-cyan/5 border border-cyan/20 rounded-xl p-4">
-              <div className="font-mono text-sm text-cyan tracking-wider mb-3">⭐ AIRLABS.CO</div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-mono text-sm text-cyan tracking-wider">⭐ AIRLABS.CO</div>
+                {state.apiKeysConfigured?.airLabs && (
+                  <span className="text-xs text-green font-mono">✓ Configured</span>
+                )}
+              </div>
               <input
                 type="password"
-                placeholder="Paste AirLabs API key…"
+                placeholder="Enter new key (or leave blank to keep current)"
                 className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2"
                 value={state.apiKeys.airLabs}
                 onChange={(e) => setApiKey('airLabs', e.target.value)}
               />
-              <button
-                onClick={() => onShowToast('AirLabs key updated')}
-                className="w-full bg-cyan/20 border border-cyan text-cyan px-3 py-2 rounded-lg font-mono text-xs font-bold hover:bg-cyan/30 transition-colors"
-              >
-                SAVE KEY
-              </button>
             </div>
             <div className="bg-cyan/5 border border-cyan/20 rounded-xl p-4">
-              <div className="font-mono text-sm text-cyan tracking-wider mb-3">✈️ AVIATIONSTACK</div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-mono text-sm text-cyan tracking-wider">✈️ AVIATIONSTACK</div>
+                {state.apiKeysConfigured?.aviationStack && (
+                  <span className="text-xs text-green font-mono">✓ Configured</span>
+                )}
+              </div>
               <input
                 type="password"
-                placeholder="Paste AviationStack API key…"
+                placeholder="Enter new key (or leave blank to keep current)"
                 className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2"
                 value={state.apiKeys.aviationStack}
                 onChange={(e) => setApiKey('aviationStack', e.target.value)}
               />
-              <button
-                onClick={() => onShowToast('AviationStack key updated')}
-                className="w-full bg-cyan/20 border border-cyan text-cyan px-3 py-2 rounded-lg font-mono text-xs font-bold hover:bg-cyan/30 transition-colors"
-              >
-                SAVE KEY
-              </button>
             </div>
+          </div>
+        </div>
+
+        {/* Global Admin Save */}
+        <div>
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛡️ ADMIN CONTROLS</div>
+          <button 
+            onClick={handleAdminSave}
+            disabled={isSaving}
+            className="w-full bg-red-500/20 border border-red-500 text-red-400 px-4 py-3 rounded-xl font-mono text-sm font-bold hover:bg-red-500/30 transition-colors disabled:opacity-50"
+          >
+            {isSaving ? 'SAVING...' : 'SAVE AS GLOBAL DEFAULTS'}
+          </button>
+          <div className="text-xs text-tdim mt-2 text-center">
+            Applies your current settings & API keys to all users.
           </div>
         </div>
 

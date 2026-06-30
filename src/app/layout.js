@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google';
 import { FlightProvider } from '@/context/FlightContext';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -7,7 +8,6 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'SkyWatch — Live Flight Radar',
   description: 'Real-time aircraft tracking with ADS-B data',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
@@ -18,6 +18,14 @@ export const metadata = {
     statusBarStyle: 'black-translucent',
     title: 'SkyWatch',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
   themeColor: '#040d14',
 };
 
@@ -32,6 +40,7 @@ export default function RootLayout({ children }) {
         <FlightProvider>
           {children}
         </FlightProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

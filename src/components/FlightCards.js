@@ -12,7 +12,7 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
 
   return (
     <div className="px-2 pb-4 space-y-2">
-      {flights.map((f, i) => (
+      {flights.filter(Boolean).map((f, i) => (
         <div
           key={f.id}
           onClick={() => onSelectFlight?.(f)}
@@ -22,9 +22,9 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
           style={{ animationDelay: `${i * 0.05}s` }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="font-mono font-bold text-sm text-white">{f.callsign}</div>
+            <div className="font-mono font-bold text-sm text-white">{f.callsign || 'UNKNOWN'}</div>
             <div className="text-xs font-mono text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded">
-              {f.distKm.toFixed(1)} km
+              {Number(f.distKm || 0).toFixed(1)} km
             </div>
           </div>
           <div className="flex items-center gap-2 mb-1 text-xs">
@@ -33,20 +33,20 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
           </div>
           <div className="grid grid-cols-4 gap-1 mt-2 text-xs text-center">
             <div>
-              <div className="font-mono font-bold text-green">{f.altitude.toLocaleString()} ft</div>
+              <div className="font-mono font-bold text-green">{Number(f.altitude || 0).toLocaleString()} ft</div>
               <div className="text-tdim">ALT</div>
             </div>
             <div>
-              <div className="font-mono font-bold text-green">{f.speed} kts</div>
+              <div className="font-mono font-bold text-green">{f.speed || 0} kts</div>
               <div className="text-tdim">SPD</div>
             </div>
             <div>
-              <div className="font-mono font-bold text-green">{f.heading}°</div>
+              <div className="font-mono font-bold text-green">{f.heading || 0}°</div>
               <div className="text-tdim">HDG</div>
             </div>
             <div>
               <div className="font-mono font-bold text-green">
-                {f.vertRate > 200 ? '↑' : f.vertRate < -200 ? '↓' : '→'}
+                {(f.vertRate || 0) > 200 ? '↑' : (f.vertRate || 0) < -200 ? '↓' : '→'}
               </div>
               <div className="text-tdim">V/S</div>
             </div>
@@ -54,7 +54,7 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
           <div className="mt-2 h-1 bg-cyan/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-cyan to-green"
-              style={{ width: `${Math.min(100, (f.altitude / 42000) * 100)}%` }}
+              style={{ width: `${Math.min(100, (Number(f.altitude || 0) / 42000) * 100)}%` }}
             ></div>
           </div>
         </div>

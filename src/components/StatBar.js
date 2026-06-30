@@ -27,7 +27,9 @@ export default function StatBar({ flights = 0, radius = 100, maxAlt = 0 }) {
         <div className="text-tdim font-mono tracking-widest mt-0.5">Radius</div>
       </div>
       <div className="text-center">
-        <div className="font-mono font-bold text-base text-cyan drop-shadow-[0_0_8px_#00c8ff]">—</div>
+        <div className="font-mono font-bold text-base text-cyan drop-shadow-[0_0_8px_#00c8ff]">
+          {maxAlt > 0 ? `${(maxAlt / 1000).toFixed(1)}k` : '—'}
+        </div>
         <div className="text-tdim font-mono tracking-widest mt-0.5">Max Alt</div>
       </div>
       <div className="text-center">

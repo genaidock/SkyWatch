@@ -1,6 +1,6 @@
 'use client';
 
-export default function LocationBar({ location, onShowToast, onLocationClick }) {
+export default function LocationBar({ location, onLocationClick, onRecenter }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-cyan/15 bg-surface flex-shrink-0 text-sm">
       <span className="text-lg">📍</span>
@@ -14,10 +14,10 @@ export default function LocationBar({ location, onShowToast, onLocationClick }) 
         ✎ LOCATION
       </button>
       <button
-        onClick={() => onShowToast('Refreshing...')}
+        onClick={onRecenter}
         className="text-xs font-mono text-cyan border border-cyan/20 px-2 py-1 rounded-lg bg-cyan/10 hover:bg-cyan/20 transition-colors flex-shrink-0"
       >
-        ↺
+        ↺ RECENTER
       </button>
     </div>
   );

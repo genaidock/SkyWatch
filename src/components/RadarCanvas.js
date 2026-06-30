@@ -1,12 +1,36 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { bearing, degreesToRadians } from '@/lib/utils';
+import { bearing, haversine, degreesToRadians } from '@/lib/utils';
 
-export default function RadarCanvas({ flights = [], selectedFlight = null, userLat = 0, userLon = 0, radius = 100, onSelectFlight }) {
+export default function RadarCanvas({ flights = [], selectedFlight = null, userLat = 0, userLon = 0, radius = 100, onSelectFlight, trailsRef }) {
   const canvasRef = useRef(null);
   const animRefRef = useRef(null);
   const sweepRef = useRef(0);
+
+  const getExtrapolatedPosition = (f, now) => {
+    const elapsedSec = Math.max(0, (now - (f.lastUpdated || now)) / 1000);
+    // Convert speed (knots) to km/h, then distance in km
+    const speedKmh = (f.speed || 0) * 1.852;
+    const distanceKm = (speedKmh / 3600) * elapsedSec;
+
+    const headingRad = degreesToRadians(f.heading || 0);
+    const latRad = degreesToRadians(f.lat);
+
+    // Approximate lat/lon change
+    const deltaLat = (distanceKm * Math.cos(headingRad)) / 111.32;
+    const deltaLon = (distanceKm * Math.sin(headingRad)) / (111.32 * Math.cos(latRad));
+
+    const currentLat = f.lat + deltaLat;
+    const currentLon = f.lon + deltaLon;
+
+    return {
+      lat: currentLat,
+      lon: currentLon,
+      distKm: haversine(userLat, userLon, currentLat, currentLon),
+      bearing: bearing(userLat, userLon, currentLat, currentLon),
+    };
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -92,31 +116,90 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       ctx.stroke();
       ctx.restore();
 
+      const now = Date.now();
+
+      // Draw flight trails
+      if (trailsRef?.current) {
+        const project = (lat, lon) => {
+          const d = haversine(userLat, userLon, lat, lon);
+          const b = bearing(userLat, userLon, lat, lon);
+          const px = (d / radius) * maxR;
+          return {
+            x: cx + px * Math.cos(degreesToRadians(b - 90)),
+            y: cy + px * Math.sin(degreesToRadians(b - 90)),
+            dist: d,
+          };
+        };
+        trailsRef.current.forEach((pts) => {
+          if (pts.length < 2) return;
+          const coords = pts.map(p => project(p.lat, p.lon));
+          const cutoff = coords.filter(c => c.dist <= radius);
+          if (cutoff.length < 2) return;
+          for (let i = 1; i < cutoff.length; i++) {
+            const t = i / cutoff.length;
+            ctx.beginPath();
+            ctx.moveTo(cutoff[i - 1].x, cutoff[i - 1].y);
+            ctx.lineTo(cutoff[i].x, cutoff[i].y);
+            ctx.strokeStyle = `rgba(0,255,157,${(1 - t) * 0.35})`;
+            ctx.lineWidth = 1.5 - t * 0.8;
+            ctx.stroke();
+          }
+        });
+      }
+
       // Draw aircraft
       flights.forEach(f => {
-        const b = bearing(userLat, userLon, f.lat, f.lon);
-        const px = (f.distKm / radius) * maxR;
-        const bx = cx + px * Math.cos(degreesToRadians(b - 90));
-        const by = cy + px * Math.sin(degreesToRadians(b - 90));
+        const pos = getExtrapolatedPosition(f, now);
+        
+        const px = (pos.distKm / radius) * maxR;
+        const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
+        const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
         const isSel = selectedFlight && selectedFlight.id === f.id;
         const col = isSel ? '#ffb300' : f.altitude < 3000 ? '#ff3b3b' : f.onGround ? '#ffb300' : '#00ff9d';
 
-        ctx.beginPath();
-        ctx.arc(bx, by, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = col;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 9;
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        const l = size * 0.008; // Base scale for the airplane shape
 
         ctx.save();
         ctx.translate(bx, by);
         ctx.rotate(degreesToRadians(f.heading));
-        ctx.font = `${size * 0.034}px serif`;
+        
+        // Add a subtle glow to the plane itself
+        ctx.shadowColor = col;
+        ctx.shadowBlur = isSel ? 12 : 4;
+        
+        ctx.beginPath();
+        // Nose
+        ctx.moveTo(0, -l * 1.8);
+        // Right nose/fuselage
+        ctx.bezierCurveTo(l * 0.25, -l * 1.8, l * 0.35, -l * 1.4, l * 0.35, -l * 0.8);
+        ctx.lineTo(l * 0.35, -l * 0.3);
+        // Right wing
+        ctx.lineTo(l * 2.2, l * 0.5);
+        ctx.lineTo(l * 2.2, l * 0.8);
+        ctx.lineTo(l * 0.35, l * 0.6);
+        // Right fuselage to tail
+        ctx.lineTo(l * 0.25, l * 1.5);
+        // Right tail wing
+        ctx.lineTo(l * 1.0, l * 1.8);
+        ctx.lineTo(l * 1.0, l * 2.1);
+        ctx.lineTo(0, l * 1.9); // Center tail
+        // Left tail wing
+        ctx.lineTo(-l * 1.0, l * 2.1);
+        ctx.lineTo(-l * 1.0, l * 1.8);
+        // Left fuselage from tail
+        ctx.lineTo(-l * 0.25, l * 1.5);
+        // Left wing
+        ctx.lineTo(-l * 0.35, l * 0.6);
+        ctx.lineTo(-l * 2.2, l * 0.8);
+        ctx.lineTo(-l * 2.2, l * 0.5);
+        ctx.lineTo(-l * 0.35, -l * 0.3);
+        // Left nose/fuselage
+        ctx.lineTo(-l * 0.35, -l * 0.8);
+        ctx.bezierCurveTo(-l * 0.35, -l * 1.4, -l * 0.25, -l * 1.8, 0, -l * 1.8);
+        ctx.closePath();
+        
         ctx.fillStyle = col;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('✈', 0, 0);
+        ctx.fill();
         ctx.restore();
 
         // Draw callsign
@@ -155,7 +238,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     return () => {
       if (animRefRef.current) cancelAnimationFrame(animRefRef.current);
     };
-  }, [flights, selectedFlight, radius, userLat, userLon]);
+  }, [flights, selectedFlight, radius, userLat, userLon, trailsRef]);
 
   const handleCanvasClick = (e) => {
     if (!onSelectFlight || !canvasRef.current) return;
@@ -171,12 +254,14 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     
     let closestFlight = null;
     let minDist = Infinity;
+    const now = Date.now();
 
     flights.forEach(f => {
-      const b = bearing(userLat, userLon, f.lat, f.lon);
-      const px = (f.distKm / radius) * maxR;
-      const bx = cx + px * Math.cos(degreesToRadians(b - 90));
-      const by = cy + px * Math.sin(degreesToRadians(b - 90));
+      const pos = getExtrapolatedPosition(f, now);
+      
+      const px = (pos.distKm / radius) * maxR;
+      const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
+      const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
 
       const dx = clickX - bx;
       const dy = clickY - by;

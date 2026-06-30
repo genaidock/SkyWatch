@@ -6,6 +6,16 @@ const ROUTE_PROMISES = {};
 const ROUTE_TTL = 10 * 60 * 1000; // 10 minutes
 let RATE_LIMITED_UNTIL = 0;
 
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal, redirect: 'error' });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 // Parse responses from different flight data APIs
 export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
   try {
@@ -195,16 +205,39 @@ export function parseAirLabs(data, userLat, userLon, radiusKm) {
 export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs = {}, apiKeys = {}) {
   if (!userLat || !userLon) return [];
 
+  // Try the server-side cached endpoint first
+  try {
+    const params = new URLSearchParams({
+      lat: userLat.toFixed(4),
+      lon: userLon.toFixed(4),
+      radius: String(Math.max(10, Math.ceil(radiusKm))),
+    });
+    for (const [key, val] of Object.entries(enabledAPIs)) {
+      params.set(key, String(!!val));
+    }
+    const res = await fetchWithTimeout(`/api/flights?${params}`, 12000);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.flights && data.flights.length > 0) {
+        return data.flights;
+      }
+    }
+  } catch (e) {
+    // fall through to legacy approach
+  }
+
+  // Legacy fallback: fetch via proxy
   const sources = [];
   const latF = (+userLat).toFixed(4);
   const lonF = (+userLon).toFixed(4);
   const distNm = Math.max(10, Math.ceil(radiusKm * 1.2 * 0.621371));
+  const proxied = (target) => `/api/proxy?url=${encodeURIComponent(target)}`;
 
   // Source 1: Airplanes.live (free, no key needed)
   if (enabledAPIs.airplaneslive !== false) {
     sources.push({
       name: 'Airplanes.live',
-      url: `/api/proxy?url=https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`,
+      url: proxied(`https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`),
       parser: (data) => parseAirplanesLive(data, userLat, userLon, radiusKm),
     });
   }
@@ -213,27 +246,25 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
   if (enabledAPIs.adsblol !== false) {
     sources.push({
       name: 'ADS-B.lol',
-      url: `/api/proxy?url=https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`,
+      url: proxied(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`),
       parser: (data) => parseADSBLol(data, userLat, userLon, radiusKm),
     });
   }
 
-  // Source 3: AviationStack (requires key)
-  const aviationKey = apiKeys.aviationStack?.trim();
-  if (enabledAPIs.aviationstack !== false && aviationKey) {
+  // Source 3: AviationStack (key injected server-side by proxy)
+  if (enabledAPIs.aviationstack !== false) {
     sources.push({
       name: 'AviationStack',
-      url: `/api/proxy?url=https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(aviationKey)}&flight_status=active&limit=100`,
+      url: proxied(`https://api.aviationstack.com/v1/flights?flight_status=active&limit=100`),
       parser: (data) => parseAviationStack(data, userLat, userLon, radiusKm),
     });
   }
 
-  // Source 4: AirLabs (requires key)
-  const airLabsKey = apiKeys.airLabs?.trim();
-  if (enabledAPIs.airlabs !== false && airLabsKey) {
+  // Source 4: AirLabs (key injected server-side by proxy)
+  if (enabledAPIs.airlabs !== false) {
     sources.push({
       name: 'AirLabs',
-      url: `/api/proxy?url=https://airlabs.co/api/v9/flights?api_key=${encodeURIComponent(airLabsKey)}`,
+      url: proxied(`https://airlabs.co/api/v9/flights`),
       parser: (data) => parseAirLabs(data, userLat, userLon, radiusKm),
     });
   }
@@ -241,7 +272,7 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
   const sourceResults = await Promise.allSettled(
     sources.map(async (source) => {
       try {
-        const response = await fetch(source.url, { timeout: 5000 });
+        const response = await fetchWithTimeout(source.url, 5000);
         if (!response.ok) throw new Error(`${response.status}`);
 
         const data = await response.json();
@@ -266,7 +297,7 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
   return generateDemoFlights(userLat, userLon, radiusKm);
 }
 
-function uniqueFlights(flights) {
+export function uniqueFlights(flights) {
   const map = new Map();
   flights.forEach((flight) => {
     const key = flight.icao24 || flight.callsign || flight.id;
@@ -289,7 +320,7 @@ function uniqueFlights(flights) {
   return Array.from(map.values()).sort((a, b) => a.distKm - b.distKm);
 }
 
-function generateDemoFlights(baseLat, baseLon, radius) {
+export function generateDemoFlights(baseLat, baseLon, radius) {
   const demos = [
     { cs: 'AI101', from: 'BOM', to: 'DEL', alt: 35000, spd: 480, hdg: 350, type: 'A320' },
     { cs: '6E202', from: 'PNQ', to: 'BLR', alt: 28000, spd: 420, hdg: 165, type: 'A321' },
@@ -362,7 +393,7 @@ export async function enrichRoutes(flights) {
     ROUTE_PROMISES[cs] = (async () => {
       try {
         const url = `/api/proxy?url=https://api.airplanes.live/v2/callsign/${encodeURIComponent(key)}`;
-        const response = await fetch(url, { timeout: 5000 });
+        const response = await fetchWithTimeout(url, 5000);
 
         if (!response.ok) {
           if (response.status === 429) {

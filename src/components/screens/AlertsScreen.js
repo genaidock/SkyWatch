@@ -6,6 +6,24 @@ import { useFlightContext } from '@/context/FlightContext';
 export default function AlertsScreen() {
   const { state } = useFlightContext();
 
+  const getCategoryStyles = (category) => {
+    switch (category) {
+      case 'emergency': return 'border-red-500 bg-red-500/10 text-red-400';
+      case 'military': return 'border-green-500 bg-green-500/10 text-green-400';
+      case 'private': return 'border-purple-500 bg-purple-500/10 text-purple-400';
+      default: return 'border-cyan/15 bg-panel text-tmid';
+    }
+  };
+
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'emergency': return '🚨';
+      case 'military': return '🪖';
+      case 'private': return '🥂';
+      default: return 'ℹ️';
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header title="ALERTS" subtitle="NOTIFICATIONS" liveIndicator />
@@ -17,14 +35,23 @@ export default function AlertsScreen() {
           </div>
         ) : (
           <div className="px-3 py-3 space-y-2">
-            {state.alerts.map((a, i) => (
-              <div key={i} className="bg-panel border border-cyan/15 rounded-xl p-3">
-                <div className="text-sm text-tmid">{a.message}</div>
-                <div className="text-xs font-mono text-tdim mt-1">
-                  {a.timestamp?.toLocaleTimeString()}
+            {state.alerts.map((a, i) => {
+              const catStyle = getCategoryStyles(a.category);
+              const icon = getCategoryIcon(a.category);
+              return (
+                <div key={i} className={`border rounded-xl p-3 ${catStyle}`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg leading-none mt-0.5">{icon}</span>
+                    <div>
+                      <div className="text-sm font-medium">{a.message}</div>
+                      <div className="text-xs font-mono opacity-70 mt-1">
+                        {a.timestamp?.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

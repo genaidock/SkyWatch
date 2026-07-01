@@ -38,7 +38,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
 
         {/* ─── Radar + Map container ─── */}
         <div
-          className="radar-map-container relative mx-auto flex-shrink-0"
+          className="radar-map-container relative mx-auto flex-shrink-0 touch-none select-none"
           style={{
             width: '100%',
             maxWidth: 'min(100%, 60vh)',

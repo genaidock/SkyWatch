@@ -326,7 +326,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     <canvas
       ref={canvasRef}
       onClick={handleCanvasClick}
-      className="absolute inset-0 w-full h-full block cursor-pointer"
+      className="absolute inset-0 w-full h-full block cursor-pointer touch-none select-none"
       style={{ zIndex: 1 }}
     />
   );

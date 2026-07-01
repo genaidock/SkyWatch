@@ -147,6 +147,31 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         });
       }
 
+      const getAircraftVisuals = (f) => {
+        const desc = (f.desc || '').toLowerCase();
+        const type = (f.type || '').toUpperCase();
+        
+        let category = 'civil';
+        if (/military|air force|navy|army|coast guard|nato|fighter|bomber/.test(desc) || /^(F16|F35|C17|C130|EUFI|B52|A400|V22)$/.test(type)) {
+          category = 'military';
+        } else if (/gulfstream|challenger|citation|falcon|learjet|legacy|bizjet/.test(desc) || /^(GLF|C56|CL3|F2TH|E55|E50|BE2|BE9|PC12|PC24)/.test(type)) {
+          category = 'private';
+        }
+
+        let sizeMult = 1.0;
+        if (/^(A38|B74|B77|B78|A35|A34|A33|C5|C17|AN1)/.test(type) || desc.includes('heavy') || desc.includes('widebody')) {
+          sizeMult = 1.6;
+        } else if (/^(C17|P28|SR2|C15|C18|R44|B06|DA4|DA6|C20|PA2|PA3)/.test(type) || desc.includes('light') || desc.includes('small') || desc.includes('piper')) {
+          sizeMult = 0.65;
+        } else if (category === 'military' && !/^(C17|C130|A400)/.test(type)) {
+          sizeMult = 0.75; // Fast jets
+        } else if (category === 'private') {
+          sizeMult = 0.8;
+        }
+
+        return { category, sizeMult };
+      };
+
       // Draw aircraft
       flights.forEach(f => {
         const pos = getExtrapolatedPosition(f, now);
@@ -155,37 +180,75 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
         const isSel = selectedFlight && selectedFlight.id === f.id;
         const col = isSel ? '#ffb300' : f.altitude < 3000 ? '#ff3b3b' : f.onGround ? '#ffb300' : '#00ff9d';
-        const l = s * 0.008;
+        
+        const { category, sizeMult } = getAircraftVisuals(f);
+        const l = s * 0.008 * sizeMult;
 
         ctx.save();
         ctx.translate(bx, by);
         ctx.rotate(degreesToRadians(f.heading));
         ctx.shadowColor = col;
         ctx.shadowBlur = isSel ? 12 : 4;
+        ctx.fillStyle = col;
 
         ctx.beginPath();
-        ctx.moveTo(0, -l * 1.8);
-        ctx.bezierCurveTo(l * 0.25, -l * 1.8, l * 0.35, -l * 1.4, l * 0.35, -l * 0.8);
-        ctx.lineTo(l * 0.35, -l * 0.3);
-        ctx.lineTo(l * 2.2, l * 0.5);
-        ctx.lineTo(l * 2.2, l * 0.8);
-        ctx.lineTo(l * 0.35, l * 0.6);
-        ctx.lineTo(l * 0.25, l * 1.5);
-        ctx.lineTo(l * 1.0, l * 1.8);
-        ctx.lineTo(l * 1.0, l * 2.1);
-        ctx.lineTo(0, l * 1.9);
-        ctx.lineTo(-l * 1.0, l * 2.1);
-        ctx.lineTo(-l * 1.0, l * 1.8);
-        ctx.lineTo(-l * 0.25, l * 1.5);
-        ctx.lineTo(-l * 0.35, l * 0.6);
-        ctx.lineTo(-l * 2.2, l * 0.8);
-        ctx.lineTo(-l * 2.2, l * 0.5);
-        ctx.lineTo(-l * 0.35, -l * 0.3);
-        ctx.lineTo(-l * 0.35, -l * 0.8);
-        ctx.bezierCurveTo(-l * 0.35, -l * 1.4, -l * 0.25, -l * 1.8, 0, -l * 1.8);
+        if (category === 'military') {
+          // Sharp delta fighter shape
+          ctx.moveTo(0, -l * 2.5);
+          ctx.lineTo(l * 0.3, -l * 0.5);
+          ctx.lineTo(l * 1.5, l * 0.8);
+          ctx.lineTo(l * 0.4, l * 0.8);
+          ctx.lineTo(l * 0.2, l * 2.0);
+          ctx.lineTo(0, l * 1.5);
+          ctx.lineTo(-l * 0.2, l * 2.0);
+          ctx.lineTo(-l * 0.4, l * 0.8);
+          ctx.lineTo(-l * 1.5, l * 0.8);
+          ctx.lineTo(-l * 0.3, -l * 0.5);
+        } else if (category === 'private') {
+          // T-tail swept bizjet
+          ctx.moveTo(0, -l * 2.0);
+          ctx.bezierCurveTo(l * 0.2, -l * 2.0, l * 0.25, -l * 1.5, l * 0.25, -l * 0.8);
+          ctx.lineTo(l * 0.25, 0);
+          ctx.lineTo(l * 1.8, l * 0.6);
+          ctx.lineTo(l * 1.8, l * 0.9);
+          ctx.lineTo(l * 0.25, l * 0.7);
+          ctx.lineTo(l * 0.2, l * 1.6);
+          // T-Tail
+          ctx.lineTo(l * 0.8, l * 1.8);
+          ctx.lineTo(l * 0.8, l * 2.1);
+          ctx.lineTo(0, l * 2.0);
+          ctx.lineTo(-l * 0.8, l * 2.1);
+          ctx.lineTo(-l * 0.8, l * 1.8);
+          ctx.lineTo(-l * 0.2, l * 1.6);
+          ctx.lineTo(-l * 0.25, l * 0.7);
+          ctx.lineTo(-l * 1.8, l * 0.9);
+          ctx.lineTo(-l * 1.8, l * 0.6);
+          ctx.lineTo(-l * 0.25, 0);
+          ctx.lineTo(-l * 0.25, -l * 0.8);
+          ctx.bezierCurveTo(-l * 0.25, -l * 1.5, -l * 0.2, -l * 2.0, 0, -l * 2.0);
+        } else {
+          // Standard airliner
+          ctx.moveTo(0, -l * 1.8);
+          ctx.bezierCurveTo(l * 0.25, -l * 1.8, l * 0.35, -l * 1.4, l * 0.35, -l * 0.8);
+          ctx.lineTo(l * 0.35, -l * 0.3);
+          ctx.lineTo(l * 2.2, l * 0.5);
+          ctx.lineTo(l * 2.2, l * 0.8);
+          ctx.lineTo(l * 0.35, l * 0.6);
+          ctx.lineTo(l * 0.25, l * 1.5);
+          ctx.lineTo(l * 1.0, l * 1.8);
+          ctx.lineTo(l * 1.0, l * 2.1);
+          ctx.lineTo(0, l * 1.9);
+          ctx.lineTo(-l * 1.0, l * 2.1);
+          ctx.lineTo(-l * 1.0, l * 1.8);
+          ctx.lineTo(-l * 0.25, l * 1.5);
+          ctx.lineTo(-l * 0.35, l * 0.6);
+          ctx.lineTo(-l * 2.2, l * 0.8);
+          ctx.lineTo(-l * 2.2, l * 0.5);
+          ctx.lineTo(-l * 0.35, -l * 0.3);
+          ctx.lineTo(-l * 0.35, -l * 0.8);
+          ctx.bezierCurveTo(-l * 0.35, -l * 1.4, -l * 0.25, -l * 1.8, 0, -l * 1.8);
+        }
         ctx.closePath();
-
-        ctx.fillStyle = col;
         ctx.fill();
         ctx.restore();
 

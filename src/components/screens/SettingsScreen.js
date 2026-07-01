@@ -6,32 +6,8 @@ import { useFlightContext } from '@/context/FlightContext';
 
 export default function SettingsScreen({ onShowToast }) {
   const { state, setApiKey, setEnabledAPIs, setRadius, setRefreshInterval, updateGlobalSettings } = useFlightContext();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  const handleLogin = async () => {
-    if (!adminPassword) return;
-    setIsAuthenticating(true);
-    try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: adminPassword }),
-      });
-      if (res.ok) {
-        setIsAuthenticated(true);
-        onShowToast('Admin access granted');
-      } else {
-        onShowToast('Invalid password');
-      }
-    } catch (err) {
-      onShowToast('Authentication failed');
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const toggleApi = (key) => {
     const isCurrentlyEnabled = state.enabledAPIs[key];
@@ -66,34 +42,7 @@ export default function SettingsScreen({ onShowToast }) {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header title="SETTINGS" subtitle="ADMIN ACCESS REQUIRED" />
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="bg-panel border border-cyan/30 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <div className="font-mono font-bold text-lg text-cyan mb-2 text-center">🛡️ Admin Login</div>
-            <p className="text-sm text-tdim mb-6 text-center">Please enter the admin password to access settings.</p>
-            <input 
-              type="password"
-              placeholder="Password"
-              className="w-full bg-bg border border-cyan/20 rounded-lg px-4 py-3 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            />
-            <button 
-              onClick={handleLogin}
-              disabled={isAuthenticating}
-              className="w-full bg-cyan text-bg font-bold px-4 py-3 rounded-lg font-mono text-sm hover:bg-cyan/90 disabled:opacity-50 transition-colors"
-            >
-              {isAuthenticating ? 'VERIFYING...' : 'UNLOCK SETTINGS'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -209,6 +158,13 @@ export default function SettingsScreen({ onShowToast }) {
         {/* Global Admin Save */}
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛡️ ADMIN CONTROLS</div>
+          <input 
+            type="password"
+            placeholder="Admin Password"
+            className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-3 text-center tracking-widest"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+          />
           <button 
             onClick={handleAdminSave}
             disabled={isSaving}

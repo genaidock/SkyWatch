@@ -1,10 +1,15 @@
 'use client';
 
+import { useEffect } from 'react';
 import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
 
 export default function AlertsScreen({ onSelectFlight, onShowToast }) {
-  const { state } = useFlightContext();
+  const { state, pollFlights } = useFlightContext();
+
+  useEffect(() => {
+    pollFlights();
+  }, [pollFlights]);
 
   const getCategoryStyles = (category) => {
     switch (category) {

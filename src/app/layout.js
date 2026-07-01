@@ -1,4 +1,5 @@
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import { FlightProvider } from '@/context/FlightContext';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import './globals.css';
@@ -18,6 +19,9 @@ export const metadata = {
     statusBarStyle: 'black-translucent',
     title: 'SkyWatch',
   },
+  other: {
+    'google-adsense-account': 'ca-pub-7524010618497905'
+  }
 };
 
 export const viewport = {
@@ -35,17 +39,18 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7524010618497905"
-          crossOrigin="anonymous"
-        ></script>
       </head>
       <body className={`${inter.className} bg-bg text-text overflow-hidden h-[100dvh]`}>
         <FlightProvider>
           {children}
         </FlightProvider>
         <ServiceWorkerRegister />
+        <Script
+          id="adsbygoogle-init"
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7524010618497905"
+        />
       </body>
     </html>
   );

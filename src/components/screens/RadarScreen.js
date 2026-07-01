@@ -6,9 +6,11 @@ import Header from '@/components/Header';
 import StatBar from '@/components/StatBar';
 import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
-import RadarCanvas from '@/components/RadarCanvas';
+import dynamic from 'next/dynamic';
 import FlightCards from '@/components/FlightCards';
-import RadarMapBackground from '@/components/RadarMapBackground';
+
+const RadarMapBackground = dynamic(() => import('@/components/RadarMapBackground'), { ssr: false });
+const RadarCanvas = dynamic(() => import('@/components/RadarCanvas'), { ssr: false });
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
   const { state, trailsRef, recenterLocation } = useFlightContext();
@@ -46,14 +48,12 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
             background: '#040d14',
           }}
         >
-          {/* Layer 0 – Map tiles (client-only) */}
-          {mounted && (
-            <RadarMapBackground
-              userLat={state.userLat}
-              userLon={state.userLon}
-              radius={state.radius}
-            />
-          )}
+          {/* Layer 0 – Map tiles (always render to avoid hydration mismatch) */}
+          <RadarMapBackground
+            userLat={state.userLat}
+            userLon={state.userLon}
+            radius={state.radius}
+          />
 
           {/* Layer 1 – Radar canvas (transparent bg, draws on top of map) */}
           <RadarCanvas

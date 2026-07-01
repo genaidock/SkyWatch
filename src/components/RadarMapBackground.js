@@ -79,10 +79,12 @@ export default function RadarMapBackground({ userLat, userLon, radius }) {
               top: tile.top,
               width: 256,
               height: 256,
+              maxWidth: 'none',
               imageRendering: 'pixelated',
-              filter: 'brightness(0.45) saturate(0.3) hue-rotate(170deg)',
+              filter: 'brightness(0.55) saturate(0.3) hue-rotate(170deg)',
               display: 'block',
               pointerEvents: 'none',
+              zIndex: 1,
             }}
           />
         ))}

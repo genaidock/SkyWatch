@@ -102,6 +102,16 @@ export function FlightProvider({ children }) {
         }
       }
     } catch (e) { /* ignore */ }
+
+    // Load persisted API keys so they remain visible for the admin
+    try {
+      const savedKeys = localStorage.getItem('skywatch_apikeys');
+      if (savedKeys) {
+        const parsed = JSON.parse(savedKeys);
+        if (parsed.airLabs) dispatch({ type: 'SET_API_KEY', payload: { key: 'airLabs', value: parsed.airLabs } });
+        if (parsed.aviationStack) dispatch({ type: 'SET_API_KEY', payload: { key: 'aviationStack', value: parsed.aviationStack } });
+      }
+    } catch (e) { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -186,6 +196,11 @@ export function FlightProvider({ children }) {
 
   const setApiKey = useCallback((key, value) => {
     dispatch({ type: 'SET_API_KEY', payload: { key, value } });
+    try {
+      const savedKeys = JSON.parse(localStorage.getItem('skywatch_apikeys') || '{}');
+      savedKeys[key] = value;
+      localStorage.setItem('skywatch_apikeys', JSON.stringify(savedKeys));
+    } catch (e) { /* ignore */ }
   }, []);
 
   const updateGlobalSettings = useCallback(async (newSettings, password) => {

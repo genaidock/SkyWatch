@@ -34,11 +34,19 @@ export default function SettingsScreen({ onShowToast }) {
   };
 
   const toggleApi = (key) => {
+    const isCurrentlyEnabled = state.enabledAPIs[key];
+    const enabledCount = Object.values(state.enabledAPIs).filter(Boolean).length;
+
+    if (isCurrentlyEnabled && enabledCount <= 1) {
+      onShowToast('Cannot disable the last active API source.');
+      return;
+    }
+
     setEnabledAPIs({
       ...state.enabledAPIs,
-      [key]: !state.enabledAPIs[key],
+      [key]: !isCurrentlyEnabled,
     });
-    onShowToast(`${key} ${state.enabledAPIs[key] ? 'disabled' : 'enabled'}`);
+    onShowToast(`${key} ${isCurrentlyEnabled ? 'disabled' : 'enabled'}`);
   };
 
   const handleAdminSave = async () => {

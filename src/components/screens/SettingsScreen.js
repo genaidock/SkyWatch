@@ -8,6 +8,7 @@ export default function SettingsScreen({ onShowToast }) {
   const { state, setApiKey, setEnabledAPIs, setRadius, setRefreshInterval, updateGlobalSettings } = useFlightContext();
   const [adminPassword, setAdminPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const toggleApi = (key) => {
     const isCurrentlyEnabled = state.enabledAPIs[key];
@@ -35,6 +36,8 @@ export default function SettingsScreen({ onShowToast }) {
         apiKeys: state.apiKeys,
       }, adminPassword);
       onShowToast('Global settings updated successfully!');
+      setShowPasswordModal(false);
+      setAdminPassword('');
     } catch (err) {
       onShowToast(err.message || 'Failed to update global settings');
     } finally {
@@ -158,19 +161,11 @@ export default function SettingsScreen({ onShowToast }) {
         {/* Global Admin Save */}
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛡️ ADMIN CONTROLS</div>
-          <input 
-            type="password"
-            placeholder="Admin Password"
-            className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-3 text-center tracking-widest"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-          />
           <button 
-            onClick={handleAdminSave}
-            disabled={isSaving}
+            onClick={() => setShowPasswordModal(true)}
             className="w-full bg-red-500/20 border border-red-500 text-red-400 px-4 py-3 rounded-xl font-mono text-sm font-bold hover:bg-red-500/30 transition-colors disabled:opacity-50"
           >
-            {isSaving ? 'SAVING...' : 'SAVE AS GLOBAL DEFAULTS'}
+            SAVE AS GLOBAL DEFAULTS
           </button>
           <div className="text-xs text-tdim mt-2 text-center">
             Applies your current settings & API keys to all users.
@@ -186,6 +181,40 @@ export default function SettingsScreen({ onShowToast }) {
           </div>
         </div>
       </div>
+
+      {/* Password Modal Overlay */}
+      {showPasswordModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-bg/80 backdrop-blur-sm">
+          <div className="bg-panel border border-cyan/30 rounded-2xl w-full max-w-xs p-6 shadow-2xl">
+            <div className="font-mono font-bold text-lg text-cyan mb-2 text-center">🛡️ Admin Verification</div>
+            <p className="text-xs text-tdim mb-4 text-center">Enter admin password to save settings globally.</p>
+            <input 
+              type="password"
+              placeholder="Password"
+              className="w-full bg-bg border border-cyan/20 rounded-lg px-3 py-2 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdminSave()}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button 
+                onClick={() => { setShowPasswordModal(false); setAdminPassword(''); }}
+                className="flex-1 bg-surface border border-cyan/20 text-tdim px-3 py-2 rounded-lg font-mono text-xs hover:bg-surface/80"
+              >
+                CANCEL
+              </button>
+              <button 
+                onClick={handleAdminSave}
+                disabled={isSaving || !adminPassword}
+                className="flex-1 bg-red-500 border border-red-400 text-white px-3 py-2 rounded-lg font-mono text-xs font-bold hover:bg-red-600 disabled:opacity-50"
+              >
+                {isSaving ? 'SAVING...' : 'CONFIRM'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

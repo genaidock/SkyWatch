@@ -175,9 +175,10 @@ export function FlightProvider({ children }) {
     const isString = typeof alertInput === 'string';
     const message = isString ? alertInput : alertInput.message;
     const category = isString ? 'system' : (alertInput.category || 'system');
+    const flightId = isString ? null : alertInput.flightId;
     dispatch({
       type: 'ADD_ALERT',
-      payload: { message, category, timestamp: new Date() },
+      payload: { message, category, timestamp: new Date(), flightId },
     });
   }, []);
 
@@ -240,7 +241,7 @@ export function FlightProvider({ children }) {
           category = 'private'; label = 'Private Jet / VIP';
         }
         if (category) {
-          addAlert({ message: `[${label}] ${f.callsign} (${f.type}) detected ${Math.round(f.distKm)}km away.`, category });
+          addAlert({ message: `[${label}] ${f.callsign} (${f.type}) detected ${Math.round(f.distKm)}km away.`, category, flightId: f.id });
           alertedPlanes.current.set(f.id, now);
         }
       }

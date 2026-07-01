@@ -3,7 +3,7 @@
 import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
 
-export default function AlertsScreen() {
+export default function AlertsScreen({ onSelectFlight, onShowToast }) {
   const { state } = useFlightContext();
 
   const getCategoryStyles = (category) => {
@@ -38,8 +38,23 @@ export default function AlertsScreen() {
             {state.alerts.map((a, i) => {
               const catStyle = getCategoryStyles(a.category);
               const icon = getCategoryIcon(a.category);
+              
+              const handleClick = () => {
+                if (!a.flightId) return;
+                const flight = state.flights.find(f => f.id === a.flightId);
+                if (flight) {
+                  onSelectFlight(flight);
+                } else {
+                  onShowToast('Aircraft has left the radar range.');
+                }
+              };
+
               return (
-                <div key={i} className={`border rounded-xl p-3 ${catStyle}`}>
+                <div 
+                  key={i} 
+                  onClick={handleClick}
+                  className={`border rounded-xl p-3 ${catStyle} ${a.flightId ? 'cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all' : ''}`}
+                >
                   <div className="flex items-start gap-2">
                     <span className="text-lg leading-none mt-0.5">{icon}</span>
                     <div>

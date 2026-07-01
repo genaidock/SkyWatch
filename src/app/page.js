@@ -42,7 +42,7 @@ export default function Home() {
       case 'flights':
         return <FlightsScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />;
       case 'alerts':
-        return <AlertsScreen />;
+        return <AlertsScreen onSelectFlight={openFlightDetail} onShowToast={showToastMessage} />;
       case 'settings':
         return <SettingsScreen onShowToast={showToastMessage} />;
       case 'detail':

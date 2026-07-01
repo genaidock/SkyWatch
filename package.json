@@ -11,6 +11,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.1",
     "@vercel/kv": "^3.0.0",
     "ioredis": "^5.11.1",
     "leaflet": "^1.9.4",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@babel/preset-env": "^8.0.2",
     "@babel/preset-react": "^8.0.1",
+    "@capacitor/cli": "^8.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",

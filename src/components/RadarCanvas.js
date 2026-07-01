@@ -10,20 +10,14 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
   const getExtrapolatedPosition = (f, now) => {
     const elapsedSec = Math.max(0, (now - (f.lastUpdated || now)) / 1000);
-    // Convert speed (knots) to km/h, then distance in km
     const speedKmh = (f.speed || 0) * 1.852;
     const distanceKm = (speedKmh / 3600) * elapsedSec;
-
     const headingRad = degreesToRadians(f.heading || 0);
     const latRad = degreesToRadians(f.lat);
-
-    // Approximate lat/lon change
     const deltaLat = (distanceKm * Math.cos(headingRad)) / 111.32;
     const deltaLon = (distanceKm * Math.sin(headingRad)) / (111.32 * Math.cos(latRad));
-
     const currentLat = f.lat + deltaLat;
     const currentLon = f.lon + deltaLon;
-
     return {
       lat: currentLat,
       lon: currentLon,
@@ -38,23 +32,29 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const size = rect.width;
 
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = size + 'px';
-    canvas.style.height = size + 'px';
-    ctx.scale(dpr, dpr);
+    const resize = () => {
+      // offsetWidth is reliable — it's the CSS-rendered width of the canvas element
+      const size = canvas.offsetWidth || 300;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    // Resize now and watch for container changes
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
 
     const drawRadar = () => {
-      const s = size;
+      const s = canvas.offsetWidth || 300;
       const cx = s / 2;
       const cy = s / 2;
       const maxR = s * 0.46;
 
       ctx.clearRect(0, 0, s, s);
-      ctx.fillStyle = '#040d14';
+      // Semi-transparent dark overlay so map tiles show through
+      ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
       ctx.fillRect(0, 0, s, s);
 
       // Draw range rings
@@ -67,7 +67,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
         const km = (radius * r).toFixed(1).replace('.0', '');
         ctx.fillStyle = 'rgba(0,200,255,0.16)';
-        ctx.font = `${size * 0.019}px Courier New`;
+        ctx.font = `${s * 0.019}px Courier New`;
         ctx.textAlign = 'left';
         ctx.fillText(km + 'km', cx + maxR * r * 0.71 + 2, cy - maxR * r * 0.71 - 1);
       });
@@ -150,60 +150,46 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       // Draw aircraft
       flights.forEach(f => {
         const pos = getExtrapolatedPosition(f, now);
-        
         const px = (pos.distKm / radius) * maxR;
         const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
         const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
         const isSel = selectedFlight && selectedFlight.id === f.id;
         const col = isSel ? '#ffb300' : f.altitude < 3000 ? '#ff3b3b' : f.onGround ? '#ffb300' : '#00ff9d';
-
-        const l = size * 0.008; // Base scale for the airplane shape
+        const l = s * 0.008;
 
         ctx.save();
         ctx.translate(bx, by);
         ctx.rotate(degreesToRadians(f.heading));
-        
-        // Add a subtle glow to the plane itself
         ctx.shadowColor = col;
         ctx.shadowBlur = isSel ? 12 : 4;
-        
+
         ctx.beginPath();
-        // Nose
         ctx.moveTo(0, -l * 1.8);
-        // Right nose/fuselage
         ctx.bezierCurveTo(l * 0.25, -l * 1.8, l * 0.35, -l * 1.4, l * 0.35, -l * 0.8);
         ctx.lineTo(l * 0.35, -l * 0.3);
-        // Right wing
         ctx.lineTo(l * 2.2, l * 0.5);
         ctx.lineTo(l * 2.2, l * 0.8);
         ctx.lineTo(l * 0.35, l * 0.6);
-        // Right fuselage to tail
         ctx.lineTo(l * 0.25, l * 1.5);
-        // Right tail wing
         ctx.lineTo(l * 1.0, l * 1.8);
         ctx.lineTo(l * 1.0, l * 2.1);
-        ctx.lineTo(0, l * 1.9); // Center tail
-        // Left tail wing
+        ctx.lineTo(0, l * 1.9);
         ctx.lineTo(-l * 1.0, l * 2.1);
         ctx.lineTo(-l * 1.0, l * 1.8);
-        // Left fuselage from tail
         ctx.lineTo(-l * 0.25, l * 1.5);
-        // Left wing
         ctx.lineTo(-l * 0.35, l * 0.6);
         ctx.lineTo(-l * 2.2, l * 0.8);
         ctx.lineTo(-l * 2.2, l * 0.5);
         ctx.lineTo(-l * 0.35, -l * 0.3);
-        // Left nose/fuselage
         ctx.lineTo(-l * 0.35, -l * 0.8);
         ctx.bezierCurveTo(-l * 0.35, -l * 1.4, -l * 0.25, -l * 1.8, 0, -l * 1.8);
         ctx.closePath();
-        
+
         ctx.fillStyle = col;
         ctx.fill();
         ctx.restore();
 
-        // Draw callsign
-        ctx.font = `${size * 0.018}px Courier New`;
+        ctx.font = `${s * 0.018}px Courier New`;
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.textAlign = 'center';
         ctx.fillText(f.callsign, bx, by - 12);
@@ -225,7 +211,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.font = `bold ${size * 0.019}px Courier New`;
+      ctx.font = `bold ${s * 0.019}px Courier New`;
       ctx.fillStyle = 'rgba(0,200,255,0.48)';
       ctx.textAlign = 'center';
       ctx.fillText('YOU', cx, cy - 14);
@@ -237,6 +223,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
     return () => {
       if (animRefRef.current) cancelAnimationFrame(animRefRef.current);
+      ro.disconnect();
     };
   }, [flights, selectedFlight, radius, userLat, userLon, trailsRef]);
 
@@ -246,50 +233,38 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
-    
-    const size = rect.width;
+    const size = canvas.offsetWidth || 300;
     const cx = size / 2;
     const cy = size / 2;
     const maxR = size * 0.46;
-    
+
     let closestFlight = null;
     let minDist = Infinity;
     const now = Date.now();
 
     flights.forEach(f => {
       const pos = getExtrapolatedPosition(f, now);
-      
       const px = (pos.distKm / radius) * maxR;
       const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
       const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
-
       const dx = clickX - bx;
       const dy = clickY - by;
       const dist = Math.sqrt(dx * dx + dy * dy);
-
       if (dist < 15 && dist < minDist) {
         minDist = dist;
         closestFlight = f;
       }
     });
 
-    if (closestFlight) {
-      onSelectFlight(closestFlight);
-    }
+    if (closestFlight) onSelectFlight(closestFlight);
   };
 
   return (
-    <div 
-      className="relative mx-auto bg-gradient-radial from-cyan/5 to-bg flex-shrink-0 cursor-pointer"
-      style={{ width: '100%', maxWidth: 'min(100%, 60vh)', aspectRatio: '1 / 1' }}
-    >
-      <canvas ref={canvasRef} onClick={handleCanvasClick} className="w-full h-full block" />
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/28">N</div>
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/28">S</div>
-        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/28">E</div>
-        <div className="absolute left-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/28">W</div>
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      onClick={handleCanvasClick}
+      className="absolute inset-0 w-full h-full block cursor-pointer"
+      style={{ zIndex: 1 }}
+    />
   );
 }

@@ -33,7 +33,7 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
           </div>
           <div className="grid grid-cols-4 gap-1 mt-2 text-xs text-center">
             <div>
-              <div className="font-mono font-bold text-green">{Number(f.altitude || 0).toLocaleString()} ft</div>
+              <div className="font-mono font-bold text-green">{String(Math.round(Number(f.altitude) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ft</div>
               <div className="text-tdim">ALT</div>
             </div>
             <div>

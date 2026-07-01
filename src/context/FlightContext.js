@@ -72,6 +72,14 @@ function flightReducer(state, action) {
       };
     case 'SET_API_KEYS_CONFIGURED':
       return { ...state, apiKeysConfigured: action.payload };
+    case 'SET_GLOBAL_SETTINGS':
+      return {
+        ...state,
+        radius: action.payload.radius ?? state.radius,
+        refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
+        enabledAPIs: action.payload.enabledAPIs ?? state.enabledAPIs,
+        apiKeysConfigured: action.payload.apiKeysConfigured ?? state.apiKeysConfigured,
+      };
     default:
       return state;
   }

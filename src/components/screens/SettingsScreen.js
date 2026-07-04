@@ -77,6 +77,7 @@ export default function SettingsScreen({ onShowToast }) {
                   </button>
                 ))}
               </div>
+            </div>
           </div>
         </div>
 

@@ -364,11 +364,11 @@ export async function enrichRoutes(flights) {
 
         ROUTE_CACHE[cs] = {
           dep: route.origin?.iata_code || route.origin?.icao_code || '',
-          depName: route.origin?.name || route.origin?.municipality || '',
+          depName: (route.origin?.municipality && route.origin?.name) ? `${route.origin.municipality} - ${route.origin.name}` : (route.origin?.name || route.origin?.municipality || ''),
           depLat: route.origin?.latitude || null,
           depLon: route.origin?.longitude || null,
           arr: route.destination?.iata_code || route.destination?.icao_code || '',
-          arrName: route.destination?.name || route.destination?.municipality || '',
+          arrName: (route.destination?.municipality && route.destination?.name) ? `${route.destination.municipality} - ${route.destination.name}` : (route.destination?.name || route.destination?.municipality || ''),
           arrLat: route.destination?.latitude || null,
           arrLon: route.destination?.longitude || null,
           airline: route.airline || null,

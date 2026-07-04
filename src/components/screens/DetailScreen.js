@@ -40,22 +40,6 @@ export default function DetailScreen({ onBack }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
-          <div className="text-xs text-tdim uppercase tracking-widest">Flight Details</div>
-          <div className="grid grid-cols-2 gap-3">
-            <DetailItem label="ICAO24" value={f.icao24 || '—'} />
-            <DetailItem label="Registration" value={f.reg || '—'} />
-            <DetailItem label="Airline" value={f.country || '—'} />
-            <DetailItem label="Aircraft" value={(ac && ac.maker !== '—' ? ac.full : (f.desc || f.type)) || '—'} />
-            <DetailItem label="Altitude" value={`${f.altitude?.toLocaleString?.() ?? '—'} ft`} />
-            <DetailItem label="Speed" value={`${f.speed ?? '—'} kt`} />
-            <DetailItem label="Heading" value={`${f.heading ?? '—'}°`} />
-            <DetailItem label="Vertical Rate" value={`${f.vertRate ?? '—'} ft/m`} />
-            <DetailItem label="Squawk" value={f.squawk || '—'} />
-            <DetailItem label="Status" value={f.onGround ? 'On Ground' : 'Airborne'} />
-          </div>
-        </div>
-
-        <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
           <div className="text-xs text-tdim uppercase tracking-widest">Route</div>
           <div className="grid grid-cols-2 gap-3">
             <DetailItem label="From" value={f.from?.code && f.from?.code !== '—' ? `${f.from.code} · ${f.from.city}` : 'Not Available'} />
@@ -83,6 +67,22 @@ export default function DetailScreen({ onBack }) {
               </a>
             </div>
           )}
+        </div>
+
+        <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
+          <div className="text-xs text-tdim uppercase tracking-widest">Flight Details</div>
+          <div className="grid grid-cols-2 gap-3">
+            <DetailItem label="ICAO24" value={f.icao24 || '—'} />
+            <DetailItem label="Registration" value={f.reg || '—'} />
+            <DetailItem label="Airline" value={f.country || '—'} />
+            <DetailItem label="Aircraft" value={(ac && ac.maker !== '—' ? ac.full : (f.desc || f.type)) || '—'} />
+            <DetailItem label="Altitude" value={`${f.altitude?.toLocaleString?.() ?? '—'} ft`} />
+            <DetailItem label="Speed" value={`${f.speed ?? '—'} kt`} />
+            <DetailItem label="Heading" value={`${f.heading ?? '—'}°`} />
+            <DetailItem label="Vertical Rate" value={`${f.vertRate ?? '—'} ft/m`} />
+            <DetailItem label="Squawk" value={f.squawk || '—'} />
+            <DetailItem label="Status" value={f.onGround ? 'On Ground' : 'Airborne'} />
+          </div>
         </div>
       </div>
     </div>

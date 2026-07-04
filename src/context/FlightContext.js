@@ -298,6 +298,9 @@ export function FlightProvider({ children }) {
       lon: state.userLon.toFixed(4),
       radius: String(state.radius),
     });
+    for (const [key, val] of Object.entries(state.enabledAPIs)) {
+      params.set(key, String(!!val));
+    }
     const url = `/api/flights/stream?${params}`;
     const es = new EventSource(url);
     let connected = false;

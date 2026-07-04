@@ -21,7 +21,7 @@ async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
   }
 }
 
-async function fetchFlightsForStream(lat, lon, radius) {
+async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { airplaneslive: true, adsblol: true, aviationstack: false, airlabs: false }) {
   const radiusKm = Math.max(10, radius);
   const latF = lat.toFixed(4);
   const lonF = lon.toFixed(4);
@@ -30,21 +30,25 @@ async function fetchFlightsForStream(lat, lon, radius) {
 
   const fetchers = [];
 
-  fetchers.push(
-    fetchWithTimeout(`https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d ? parseAirplanesLive(d, lat, lon, radiusKm) : [])
-      .catch(() => [])
-  );
+  if (enabledAPIs.airplaneslive) {
+    fetchers.push(
+      fetchWithTimeout(`https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseAirplanesLive(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
+    );
+  }
 
-  fetchers.push(
-    fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d ? parseADSBLol(d, lat, lon, radiusKm) : [])
-      .catch(() => [])
-  );
+  if (enabledAPIs.adsblol) {
+    fetchers.push(
+      fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
+    );
+  }
 
-  if (keys.aviationStack) {
+  if (enabledAPIs.aviationstack && keys.aviationStack) {
     fetchers.push(
       fetchWithTimeout(`https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(keys.aviationStack)}&flight_status=active&limit=100`)
         .then(r => r.ok ? r.json() : null)
@@ -53,7 +57,7 @@ async function fetchFlightsForStream(lat, lon, radius) {
     );
   }
 
-  if (keys.airLabs) {
+  if (enabledAPIs.airlabs && keys.airLabs) {
     fetchers.push(
       fetchWithTimeout(`https://airlabs.co/api/v9/flights?api_key=${encodeURIComponent(keys.airLabs)}`)
         .then(r => r.ok ? r.json() : null)
@@ -74,6 +78,13 @@ export async function GET(request) {
   const lon = parseFloat(searchParams.get('lon'));
   const radius = parseInt(searchParams.get('radius'), 10) || 100;
 
+  const enabledAPIs = {
+    airplaneslive: searchParams.get('airplaneslive') !== 'false',
+    adsblol: searchParams.get('adsblol') !== 'false',
+    aviationstack: searchParams.get('aviationstack') === 'true',
+    airlabs: searchParams.get('airlabs') === 'true',
+  };
+
   if (isNaN(lat) || isNaN(lon)) {
     return new Response('Missing lat/lon', { status: 400 });
   }
@@ -87,7 +98,7 @@ export async function GET(request) {
       const sendFlights = async () => {
         if (request.signal.aborted) return;
         try {
-          const flights = await fetchFlightsForStream(lat, lon, radius);
+          const flights = await fetchFlightsForStream(lat, lon, radius, enabledAPIs);
           if (request.signal.aborted) return;
           const payload = JSON.stringify({ flights, timestamp: Date.now() });
           controller.enqueue(encoder.encode(`data: ${payload}\n\n`));

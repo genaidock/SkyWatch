@@ -7,7 +7,7 @@ import {
 } from '@/lib/flightApi';
 import { getApiKeys } from '@/lib/redis';
 
-const FETCH_INTERVAL = 15000;
+const FETCH_INTERVAL = 5000;
 const FETCH_TIMEOUT = 8000;
 
 async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {

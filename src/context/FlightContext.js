@@ -12,7 +12,7 @@ const initialState = {
   userLon: 73.7470,
   locationLabel: 'GPS',
   radius: 100,
-  refreshInterval: 60,
+  refreshInterval: 5,
   filter: 'all',
   apiStatus: { type: 'demo', message: 'Initializing...' },
   alerts: [],

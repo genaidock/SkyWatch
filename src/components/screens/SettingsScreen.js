@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
 
 export default function SettingsScreen({ onShowToast }) {
-  const { state, setApiKey, setEnabledAPIs, setRadius, setRefreshInterval, updateGlobalSettings } = useFlightContext();
+  const { state, setApiKey, setEnabledAPIs, setRadius, updateGlobalSettings } = useFlightContext();
   const [adminPassword, setAdminPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -77,21 +77,6 @@ export default function SettingsScreen({ onShowToast }) {
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="bg-panel border border-cyan/15 rounded-xl p-3">
-              <div className="text-sm text-text mb-2">Auto-Refresh</div>
-              <div className="flex gap-2">
-                {[5, 15, 30, 60].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setRefreshInterval(t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-mono transition-colors ${state.refreshInterval === t ? 'bg-cyan text-bg font-bold' : 'bg-surface text-tdim border border-cyan/15 hover:border-cyan/50'}`}
-                  >
-                    {t}s
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 

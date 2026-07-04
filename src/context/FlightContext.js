@@ -12,7 +12,6 @@ const initialState = {
   userLon: 73.7470,
   locationLabel: 'GPS',
   radius: 100,
-  refreshInterval: 5,
   filter: 'all',
   apiStatus: { type: 'demo', message: 'Initializing...' },
   alerts: [],
@@ -44,8 +43,6 @@ function flightReducer(state, action) {
       };
     case 'SET_RADIUS':
       return { ...state, radius: action.payload };
-    case 'SET_REFRESH_INTERVAL':
-      return { ...state, refreshInterval: action.payload };
     case 'SET_FILTER':
       return { ...state, filter: action.payload };
     case 'SET_API_STATUS':
@@ -153,10 +150,6 @@ export function FlightProvider({ children }) {
 
   const setRadius = useCallback((radius) => {
     dispatch({ type: 'SET_RADIUS', payload: radius });
-  }, []);
-
-  const setRefreshInterval = useCallback((interval) => {
-    dispatch({ type: 'SET_REFRESH_INTERVAL', payload: interval });
   }, []);
 
   const setFilter = useCallback((filter) => {
@@ -342,14 +335,14 @@ export function FlightProvider({ children }) {
     // Initial fetch (always, so we get data immediately)
     if (!sseActive.current) pollFlights();
 
-    const intervalMs = Math.max(5, state.refreshInterval) * 1000;
+    const intervalMs = 5000;
     const timer = setInterval(doPoll, intervalMs);
 
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [pollFlights, state.refreshInterval, state.userLat, state.userLon, state.radius]);
+  }, [pollFlights, state.userLat, state.userLon, state.radius]);
 
   const value = {
     state,
@@ -357,7 +350,6 @@ export function FlightProvider({ children }) {
     setSelectedFlight,
     setLocation,
     setRadius,
-    setRefreshInterval,
     setFilter,
     setApiStatus,
     addAlert,

@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
 import { getAircraftInfo } from '@/lib/utils';
+import { fetchAircraftDetails } from '@/lib/flightApi';
 
 function DetailItem({ label, value }) {
   return (
@@ -16,9 +18,28 @@ export default function DetailScreen({ onBack }) {
   const { state, setSelectedFlight } = useFlightContext();
   const f = state.selectedFlight;
 
-  if (!f) return null;
+  const [acDetails, setAcDetails] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    if (f?.icao24) {
+      setAcDetails(null);
+      fetchAircraftDetails(f.icao24).then(data => {
+        if (active && data) setAcDetails(data);
+      });
+    }
+    return () => { active = false; };
+  }, [f?.icao24]);
 
   const ac = getAircraftInfo(f.type);
+  
+  // Use fetched aircraft details if available, fallback to basic logic
+  const displayReg = acDetails?.registration || f.reg || '—';
+  const displayCountry = acDetails?.registered_owner_country_name || f.country || '—';
+  const displayMaker = acDetails?.manufacturer || (ac && ac.maker !== '—' ? ac.maker : null);
+  const displayModel = acDetails?.type || (ac && ac.maker !== '—' ? ac.model : f.desc || f.type);
+  const displayAircraft = displayMaker ? `${displayMaker} ${displayModel}` : displayModel || '—';
+  const displayOwner = acDetails?.registered_owner || (f.airlineObj ? f.airlineObj.name : '—');
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg">
@@ -40,7 +61,14 @@ export default function DetailScreen({ onBack }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
-          <div className="text-xs text-tdim uppercase tracking-widest">Route</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-tdim uppercase tracking-widest">Route</div>
+            {f.airlineObj && (
+              <div className="text-[10px] text-cyan font-mono bg-cyan/10 px-2 py-0.5 rounded border border-cyan/20">
+                {f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <DetailItem label="From" value={f.from?.code && f.from?.code !== '—' ? `${f.from.code} · ${f.from.city}` : 'Not Available'} />
             <DetailItem label="To" value={f.to?.code && f.to?.code !== '—' ? `${f.to.code} · ${f.to.city}` : 'Not Available'} />
@@ -73,9 +101,10 @@ export default function DetailScreen({ onBack }) {
           <div className="text-xs text-tdim uppercase tracking-widest">Flight Details</div>
           <div className="grid grid-cols-2 gap-3">
             <DetailItem label="ICAO24" value={f.icao24 || '—'} />
-            <DetailItem label="Registration" value={f.reg || '—'} />
-            <DetailItem label="Airline" value={f.country || '—'} />
-            <DetailItem label="Aircraft" value={(ac && ac.maker !== '—' ? ac.full : (f.desc || f.type)) || '—'} />
+            <DetailItem label="Registration" value={displayReg} />
+            <DetailItem label="Owner/Airline" value={displayOwner} />
+            <DetailItem label="Country" value={displayCountry} />
+            <DetailItem label="Aircraft" value={displayAircraft} />
             <DetailItem label="Altitude" value={`${f.altitude?.toLocaleString?.() ?? '—'} ft`} />
             <DetailItem label="Speed" value={`${f.speed ?? '—'} kt`} />
             <DetailItem label="Heading" value={`${f.heading ?? '—'}°`} />

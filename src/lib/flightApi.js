@@ -299,6 +299,8 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
       distKm: dist,
       from: { code: d.from, city: d.from },
       to: { code: d.to, city: d.to },
+      routeObj: null,
+      airlineObj: null,
       progress: 0.5,
       firstSeen: new Date(),
       isDemo: true,
@@ -362,9 +364,14 @@ export async function enrichRoutes(flights) {
 
         ROUTE_CACHE[cs] = {
           dep: route.origin?.iata_code || route.origin?.icao_code || '',
-          depName: route.origin?.municipality || route.origin?.name || '',
+          depName: route.origin?.name || route.origin?.municipality || '',
+          depLat: route.origin?.latitude || null,
+          depLon: route.origin?.longitude || null,
           arr: route.destination?.iata_code || route.destination?.icao_code || '',
-          arrName: route.destination?.municipality || route.destination?.name || '',
+          arrName: route.destination?.name || route.destination?.municipality || '',
+          arrLat: route.destination?.latitude || null,
+          arrLon: route.destination?.longitude || null,
+          airline: route.airline || null,
           ts: Date.now(),
         };
       } catch (e) {
@@ -394,11 +401,21 @@ function applyRouteCache(flights) {
   return flights.map(f => {
     const cached = ROUTE_CACHE[f.callsign];
     if (cached && Date.now() - cached.ts < ROUTE_TTL) {
-      return {
-        ...f,
-        from: cached.dep ? { code: cached.dep, city: cached.depName || getAirportName(cached.dep) || cached.dep } : f.from,
-        to: cached.arr ? { code: cached.arr, city: cached.arrName || getAirportName(cached.arr) || cached.arr } : f.to,
+      const updated = { ...f };
+      if (cached.dep) {
+        updated.from = { code: cached.dep, city: cached.depName };
+      }
+      if (cached.arr) {
+        updated.to = { code: cached.arr, city: cached.arrName };
+      }
+      updated.routeObj = {
+        depLat: cached.depLat,
+        depLon: cached.depLon,
+        arrLat: cached.arrLat,
+        arrLon: cached.arrLon,
       };
+      updated.airlineObj = cached.airline || null;
+      return updated;
     }
     return f;
   });
@@ -406,4 +423,18 @@ function applyRouteCache(flights) {
 
 function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
+}
+
+export async function fetchAircraftDetails(icao24) {
+  if (!icao24) return null;
+  try {
+    const targetUrl = `https://api.adsbdb.com/v0/aircraft/${icao24}`;
+    const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.response?.aircraft || null;
+  } catch (e) {
+    return null;
+  }
 }

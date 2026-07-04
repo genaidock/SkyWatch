@@ -142,18 +142,49 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.fillText(airport.code, ax, ay + 14);
       });
 
+      const project = (lat, lon) => {
+        const d = haversine(userLat, userLon, lat, lon);
+        const b = bearing(userLat, userLon, lat, lon);
+        const px = (d / radius) * maxR;
+        return {
+          x: cx + px * Math.cos(degreesToRadians(b - 90)),
+          y: cy + px * Math.sin(degreesToRadians(b - 90)),
+          dist: d,
+        };
+      };
+
+      // Draw flight path for selected flight
+      if (selectedFlight && selectedFlight.routeObj) {
+        const rObj = selectedFlight.routeObj;
+        if (rObj.depLat && rObj.depLon && rObj.arrLat && rObj.arrLon) {
+          const dep = project(rObj.depLat, rObj.depLon);
+          const arr = project(rObj.arrLat, rObj.arrLon);
+          
+          ctx.beginPath();
+          ctx.moveTo(dep.x, dep.y);
+          ctx.lineTo(arr.x, arr.y);
+          ctx.setLineDash([6, 6]);
+          ctx.strokeStyle = 'rgba(255, 179, 0, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Draw origin marker
+          ctx.beginPath();
+          ctx.arc(dep.x, dep.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffb300';
+          ctx.fill();
+          
+          // Draw destination marker
+          ctx.beginPath();
+          ctx.arc(arr.x, arr.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffb300';
+          ctx.fill();
+        }
+      }
+
       // Draw flight trails
       if (trailsRef?.current) {
-        const project = (lat, lon) => {
-          const d = haversine(userLat, userLon, lat, lon);
-          const b = bearing(userLat, userLon, lat, lon);
-          const px = (d / radius) * maxR;
-          return {
-            x: cx + px * Math.cos(degreesToRadians(b - 90)),
-            y: cy + px * Math.sin(degreesToRadians(b - 90)),
-            dist: d,
-          };
-        };
         trailsRef.current.forEach((pts) => {
           if (pts.length < 2) return;
           const coords = pts.map(p => project(p.lat, p.lon));

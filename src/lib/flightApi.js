@@ -362,7 +362,9 @@ export async function enrichRoutes(flights) {
 
         ROUTE_CACHE[cs] = {
           dep: route.origin?.iata_code || route.origin?.icao_code || '',
+          depName: route.origin?.municipality || route.origin?.name || '',
           arr: route.destination?.iata_code || route.destination?.icao_code || '',
+          arrName: route.destination?.municipality || route.destination?.name || '',
           ts: Date.now(),
         };
       } catch (e) {
@@ -394,8 +396,8 @@ function applyRouteCache(flights) {
     if (cached && Date.now() - cached.ts < ROUTE_TTL) {
       return {
         ...f,
-        from: cached.dep ? { code: cached.dep, city: getAirportName(cached.dep) || cached.dep } : f.from,
-        to: cached.arr ? { code: cached.arr, city: getAirportName(cached.arr) || cached.arr } : f.to,
+        from: cached.dep ? { code: cached.dep, city: cached.depName || getAirportName(cached.dep) || cached.dep } : f.from,
+        to: cached.arr ? { code: cached.arr, city: cached.arrName || getAirportName(cached.arr) || cached.arr } : f.to,
       };
     }
     return f;

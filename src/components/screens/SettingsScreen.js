@@ -81,7 +81,7 @@ export default function SettingsScreen({ onShowToast }) {
             <div className="bg-panel border border-cyan/15 rounded-xl p-3">
               <div className="text-sm text-text mb-2">Auto-Refresh</div>
               <div className="flex gap-2">
-                {[15, 20, 45, 60].map(t => (
+                {[5, 15, 30, 60].map(t => (
                   <button
                     key={t}
                     onClick={() => setRefreshInterval(t)}

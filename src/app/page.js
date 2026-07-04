@@ -32,7 +32,9 @@ export default function Home() {
 
   const openFlightDetail = (flight) => {
     setSelectedFlight(flight);
-    setCurrentScreen('detail');
+    if (flight) {
+      setCurrentScreen('detail');
+    }
   };
 
   const renderScreen = () => {

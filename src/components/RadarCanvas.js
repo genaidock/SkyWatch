@@ -374,7 +374,11 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       }
     });
 
-    if (closestFlight) onSelectFlight(closestFlight);
+    if (closestFlight) {
+      onSelectFlight(closestFlight);
+    } else {
+      onSelectFlight(null);
+    }
   };
 
   return (

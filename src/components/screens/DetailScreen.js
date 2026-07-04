@@ -46,7 +46,6 @@ export default function DetailScreen({ onBack }) {
       <div className="flex items-center gap-3 px-4 py-3 border-b border-cyan/15 flex-shrink-0">
         <button
           onClick={() => {
-            setSelectedFlight(null);
             onBack?.();
           }}
           className="text-2xl text-cyan cursor-pointer"

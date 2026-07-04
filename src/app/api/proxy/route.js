@@ -4,12 +4,11 @@ import { getApiKeys } from '@/lib/redis';
 const ALLOWED_HOSTS = new Set([
   'api.airplanes.live',
   'api.adsb.lol',
-  'api.aviationstack.com',
   'airlabs.co',
+  'api.adsbdb.com',
 ]);
 
 const HOST_KEY_PARAM = {
-  'api.aviationstack.com': 'access_key',
   'airlabs.co': 'api_key',
 };
 
@@ -32,8 +31,8 @@ function isPrivateHost(host) {
 function buildUrl(targetUrl, keys) {
   const u = new URL(targetUrl);
   const param = HOST_KEY_PARAM[u.hostname];
-  if (param && keys && keys[param === 'access_key' ? 'aviationStack' : 'airLabs']) {
-    u.searchParams.set(param, keys[param === 'access_key' ? 'aviationStack' : 'airLabs']);
+  if (param && keys && keys.airLabs) {
+    u.searchParams.set(param, keys.airLabs);
   }
   return u;
 }

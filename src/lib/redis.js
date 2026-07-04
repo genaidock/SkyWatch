@@ -51,7 +51,6 @@ export async function getApiKeys() {
   const keys = (settings && settings.apiKeys) || {};
   const data = {
     airLabs: keys.airLabs || '',
-    aviationStack: keys.aviationStack || '',
   };
   _keyCache.data = data;
   _keyCache.ts = now;

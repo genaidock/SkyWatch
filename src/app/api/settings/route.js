@@ -7,11 +7,9 @@ const DEFAULT_SETTINGS = {
   enabledAPIs: {
     airplaneslive: true,
     adsblol: true,
-    aviationstack: false,
     airlabs: false,
   },
   apiKeys: {
-    aviationStack: '',
     airLabs: '',
   },
 };
@@ -26,7 +24,6 @@ export async function GET() {
       refreshInterval: s.refreshInterval ?? DEFAULT_SETTINGS.refreshInterval,
       enabledAPIs: s.enabledAPIs ?? DEFAULT_SETTINGS.enabledAPIs,
       apiKeysConfigured: {
-        aviationStack: !!(s.apiKeys && s.apiKeys.aviationStack),
         airLabs: !!(s.apiKeys && s.apiKeys.airLabs),
       },
     };
@@ -59,7 +56,6 @@ export async function POST(request) {
 
     const mergedKeys = { ...(current.apiKeys || {}) };
     const incomingKeys = settings?.apiKeys || {};
-    if (incomingKeys.aviationStack) mergedKeys.aviationStack = String(incomingKeys.aviationStack).trim();
     if (incomingKeys.airLabs) mergedKeys.airLabs = String(incomingKeys.airLabs).trim();
 
     const merged = {
@@ -79,7 +75,6 @@ export async function POST(request) {
         refreshInterval: merged.refreshInterval,
         enabledAPIs: merged.enabledAPIs,
         apiKeysConfigured: {
-          aviationStack: !!mergedKeys.aviationStack,
           airLabs: !!mergedKeys.airLabs,
         },
       },

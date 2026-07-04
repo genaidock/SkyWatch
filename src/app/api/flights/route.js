@@ -3,7 +3,6 @@ import { getRedis, getApiKeys } from '@/lib/redis';
 import {
   parseAirplanesLive,
   parseADSBLol,
-  parseAviationStack,
   parseAirLabs,
   uniqueFlights,
 } from '@/lib/flightApi';
@@ -56,7 +55,6 @@ export async function GET(request) {
   const enabledAPIs = {
     airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
-    aviationstack: searchParams.get('aviationstack') === 'true',
     airlabs: searchParams.get('airlabs') === 'true',
   };
 
@@ -65,6 +63,11 @@ export async function GET(request) {
   const latF = lat.toFixed(4);
   const lonF = lon.toFixed(4);
   const distNm = Math.max(10, Math.ceil(radiusKm * 1.2 * 0.621371));
+
+  const deg = radiusKm / 111;
+  const cosLat = Math.cos(lat * Math.PI / 180);
+  const degLon = deg / (cosLat || 1);
+  const bbox = `${(lat - deg).toFixed(4)},${(lon - degLon).toFixed(4)},${(lat + deg).toFixed(4)},${(lon + degLon).toFixed(4)}`;
 
   const fetchers = [];
 
@@ -86,21 +89,12 @@ export async function GET(request) {
     );
   }
 
-  if (enabledAPIs.aviationstack && keys.aviationStack) {
-    fetchers.push(
-      fetchWithTimeout(`https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(keys.aviationStack)}&flight_status=active&limit=100`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseAviationStack(d, lat, lon, radiusKm) : [])
-        .catch(() => [])
-    );
-  }
-
   if (enabledAPIs.airlabs && keys.airLabs) {
     fetchers.push(
-      fetchWithTimeout(`https://airlabs.co/api/v9/flights?api_key=${encodeURIComponent(keys.airLabs)}`)
+      fetchWithTimeout(`https://airlabs.co/api/v9/flights?api_key=${encodeURIComponent(keys.airLabs)}&bbox=${bbox}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseAirLabs(d, lat, lon, radiusKm) : [])
-        .catch(() => [])
+        .catch((e) => { console.error("AirLabs error:", e); return []; })
     );
   }
 

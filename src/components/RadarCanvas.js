@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { bearing, haversine, degreesToRadians } from '@/lib/utils';
+import { bearing, haversine, degreesToRadians, ALL_AIRPORTS } from '@/lib/utils';
 
 export default function RadarCanvas({ flights = [], selectedFlight = null, userLat = 0, userLon = 0, radius = 100, onSelectFlight, trailsRef }) {
   const canvasRef = useRef(null);
@@ -117,6 +117,30 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       ctx.restore();
 
       const now = Date.now();
+
+      // Draw airports
+      ALL_AIRPORTS.forEach(airport => {
+        const d = haversine(userLat, userLon, airport.lat, airport.lon);
+        if (d > radius) return;
+
+        const b = bearing(userLat, userLon, airport.lat, airport.lon);
+        const px = (d / radius) * maxR;
+        const ax = cx + px * Math.cos(degreesToRadians(b - 90));
+        const ay = cy + px * Math.sin(degreesToRadians(b - 90));
+
+        ctx.beginPath();
+        ctx.arc(ax, ay, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.8)'; // yellow-400 with opacity
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.3)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText(airport.code, ax, ay + 14);
+      });
 
       // Draw flight trails
       if (trailsRef?.current) {

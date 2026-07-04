@@ -107,55 +107,6 @@ export function parseADSBLol(data, userLat, userLon, radiusKm) {
   }
 }
 
-export function parseAviationStack(data, userLat, userLon, radiusKm) {
-  try {
-    const flights = Array.isArray(data.data) ? data.data : [];
-    return flights
-      .filter(f => f.live && f.live.latitude != null && f.live.longitude != null)
-      .map(f => {
-        const lat = Number(f.live.latitude);
-        const lon = Number(f.live.longitude);
-        const dist = haversine(userLat, userLon, lat, lon);
-        if (dist > radiusKm) return null;
-
-        const dep = f.departure || {};
-        const arr = f.arrival || {};
-        const aircraft = f.aircraft || {};
-        const flight = f.flight || {};
-        const live = f.live || {};
-
-        return {
-          id: aircraft.icao24 || flight.icao || flight.number || `${lat.toFixed(4)}-${lon.toFixed(4)}`,
-          callsign: (flight.icao || flight.number || '').trim() || '?',
-          icao24: aircraft.icao24 || '',
-          country: f.airline?.name || '—',
-          reg: aircraft.registration || '—',
-          lat,
-          lon,
-          altitude: Math.round(live.altitude || 0),
-          altM: Math.round((live.altitude || 0) * 0.3048),
-          speed: Math.round(live.speed || live.velocity || 0),
-          heading: Math.round(live.heading || live.direction || 0),
-          vertRate: Math.round(live.vertical_rate || 0),
-          onGround: live.is_ground || live.ground || false,
-          squawk: live.squawk || '—',
-          type: aircraft.iata || aircraft.icao || '—',
-          distKm: dist,
-          from: { code: dep.iata || dep.icao || '—', city: dep.airport || '—' },
-          to: { code: arr.iata || arr.icao || '—', city: arr.airport || '—' },
-          progress: 0.5,
-          firstSeen: new Date(live.updated || Date.now()),
-          source: 'AviationStack',
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distKm - b.distKm);
-  } catch (e) {
-    console.warn('parseAviationStack error:', e);
-    return [];
-  }
-}
-
 export function parseAirLabs(data, userLat, userLon, radiusKm) {
   try {
     const flights = Array.isArray(data.response) ? data.response : Array.isArray(data.data) ? data.data : [];
@@ -233,6 +184,11 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
   const distNm = Math.max(10, Math.ceil(radiusKm * 1.2 * 0.621371));
   const proxied = (target) => `/api/proxy?url=${encodeURIComponent(target)}`;
 
+  const deg = radiusKm / 111;
+  const cosLat = Math.cos(userLat * Math.PI / 180);
+  const degLon = deg / (cosLat || 1);
+  const bbox = `${(userLat - deg).toFixed(4)},${(userLon - degLon).toFixed(4)},${(userLat + deg).toFixed(4)},${(userLon + degLon).toFixed(4)}`;
+
   // Source 1: Airplanes.live (free, no key needed)
   if (enabledAPIs.airplaneslive !== false) {
     sources.push({
@@ -251,20 +207,11 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
     });
   }
 
-  // Source 3: AviationStack (key injected server-side by proxy)
-  if (enabledAPIs.aviationstack !== false) {
-    sources.push({
-      name: 'AviationStack',
-      url: proxied(`https://api.aviationstack.com/v1/flights?flight_status=active&limit=100`),
-      parser: (data) => parseAviationStack(data, userLat, userLon, radiusKm),
-    });
-  }
-
   // Source 4: AirLabs (key injected server-side by proxy)
   if (enabledAPIs.airlabs !== false) {
     sources.push({
       name: 'AirLabs',
-      url: proxied(`https://airlabs.co/api/v9/flights`),
+      url: proxied(`https://airlabs.co/api/v9/flights?bbox=${bbox}`),
       parser: (data) => parseAirLabs(data, userLat, userLon, radiusKm),
     });
   }
@@ -359,7 +306,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
   });
 }
 
-// Enrich routes using Airplanes.live API
+// Enrich routes using adsbdb.com API
 export async function enrichRoutes(flights) {
   const toFetch = flights.filter(
     f =>
@@ -392,7 +339,8 @@ export async function enrichRoutes(flights) {
     // Create promise and store to dedupe concurrent attempts
     ROUTE_PROMISES[cs] = (async () => {
       try {
-        const url = `/api/proxy?url=https://api.airplanes.live/v2/callsign/${encodeURIComponent(key)}`;
+        const targetUrl = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(key)}`;
+        const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
         const response = await fetchWithTimeout(url, 5000);
 
         if (!response.ok) {
@@ -406,15 +354,15 @@ export async function enrichRoutes(flights) {
         }
 
         const data = await response.json();
-        const ac = (data.ac || [])[0];
-        if (!ac) {
+        const route = data.response?.flightroute;
+        if (!route) {
           ROUTE_CACHE[cs] = { dep: '', arr: '', ts: Date.now() };
           return;
         }
 
         ROUTE_CACHE[cs] = {
-          dep: ac.dep || ac.origin || '',
-          arr: ac.arr || ac.destination || '',
+          dep: route.origin?.iata_code || route.origin?.icao_code || '',
+          arr: route.destination?.iata_code || route.destination?.icao_code || '',
           ts: Date.now(),
         };
       } catch (e) {

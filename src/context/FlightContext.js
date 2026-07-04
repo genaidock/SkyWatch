@@ -19,16 +19,13 @@ const initialState = {
   enabledAPIs: {
     airplaneslive: true,
     adsblol: true,
-    aviationstack: false,
     airlabs: false,
   },
   apiKeys: {
     airLabs: '',
-    aviationStack: '',
   },
   apiKeysConfigured: {
     airLabs: false,
-    aviationStack: false,
   },
 };
 
@@ -109,7 +106,6 @@ export function FlightProvider({ children }) {
       if (savedKeys) {
         const parsed = JSON.parse(savedKeys);
         if (parsed.airLabs) dispatch({ type: 'SET_API_KEY', payload: { key: 'airLabs', value: parsed.airLabs } });
-        if (parsed.aviationStack) dispatch({ type: 'SET_API_KEY', payload: { key: 'aviationStack', value: parsed.aviationStack } });
       }
     } catch (e) { /* ignore */ }
   }, []);

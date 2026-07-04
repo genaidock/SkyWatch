@@ -102,7 +102,6 @@ export default function SettingsScreen({ onShowToast }) {
             {[
               { key: 'airplaneslive', label: 'Airplanes.live' },
               { key: 'adsblol', label: 'ADS-B.lol' },
-              { key: 'aviationstack', label: 'AviationStack' },
               { key: 'airlabs', label: 'AirLabs.co' },
             ].map(api => (
               <div key={api.key} className="bg-panel border border-cyan/15 rounded-xl p-3 flex items-center justify-between">
@@ -140,21 +139,7 @@ export default function SettingsScreen({ onShowToast }) {
                 onChange={(e) => setApiKey('airLabs', e.target.value)}
               />
             </div>
-            <div className="bg-cyan/5 border border-cyan/20 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-mono text-sm text-cyan tracking-wider">✈️ AVIATIONSTACK</div>
-                {state.apiKeysConfigured?.aviationStack && (
-                  <span className="text-xs text-green font-mono">✓ Configured</span>
-                )}
-              </div>
-              <input
-                type="password"
-                placeholder="Enter new key (or leave blank to keep current)"
-                className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2"
-                value={state.apiKeys.aviationStack}
-                onChange={(e) => setApiKey('aviationStack', e.target.value)}
-              />
-            </div>
+
           </div>
         </div>
 

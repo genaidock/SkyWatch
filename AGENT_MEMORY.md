@@ -5,7 +5,7 @@ SkyWatch is a Live Flight Radar web application. It was originally a monolithic 
 
 ## Current State
 - **Architecture**: Next.js App Router (`src/app`), React Context for global state (`src/context`), and component-based UI (`src/components`). The main view (`src/app/page.js`) acts as a Single Page Application (SPA), rendering different "screens" (Radar, Flights, Alerts, Settings, Detail) conditionally based on state.
-- **Data Fetching**: Implemented in `src/lib/flightApi.js`. Uses a Next.js API route (`/api/proxy/route.js`) to bypass CORS when calling third-party flight APIs (Airplanes.live, ADS-B.lol, AviationStack, AirLabs).
+- **Data Fetching**: Implemented in `src/lib/flightApi.js`. Uses a Next.js API route (`/api/proxy/route.js`) to bypass CORS when calling third-party flight APIs (Airplanes.live, ADS-B.lol, AirLabs).
 - **Styling**: Tailwind CSS with custom theme colors (`bg`, `cyan`, `green`, `panel`).
 - **Pending/Next Steps** (From Migration Guide & observation):
   - Location tracking (Geolocation API integration).

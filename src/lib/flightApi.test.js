@@ -1,7 +1,6 @@
 import {
   parseAirplanesLive,
   parseADSBLol,
-  parseAviationStack,
   parseAirLabs,
   uniqueFlights,
   generateDemoFlights,
@@ -68,43 +67,6 @@ describe('flightApi parsers', () => {
       const data = { ac: [{ hex: 'abc123', r: 'VT-XYZ', lat: 18.6, lon: 73.8 }] };
       const result = parseADSBLol(data, MOCK_USER_LAT, MOCK_USER_LON, MOCK_RADIUS);
       expect(result[0].callsign).toBe('VT-XYZ');
-    });
-  });
-
-  describe('parseAviationStack', () => {
-    test('parses active flights', () => {
-      const data = {
-        data: [
-          {
-            live: { latitude: 18.6, longitude: 73.8, altitude: 35000, speed: 450, heading: 90, vertical_rate: 0, is_ground: false, squawk: '1200', updated: Date.now() },
-            departure: { iata: 'BOM', icao: 'VABB', airport: 'Mumbai' },
-            arrival: { iata: 'DEL', icao: 'VIDP', airport: 'Delhi' },
-            aircraft: { icao24: 'abc123', registration: 'VT-ABC', iata: 'A320', icao: 'A320' },
-            flight: { icao: 'AI101', number: '101' },
-            airline: { name: 'Air India' },
-          },
-        ],
-      };
-      const result = parseAviationStack(data, MOCK_USER_LAT, MOCK_USER_LON, MOCK_RADIUS);
-      expect(result).toHaveLength(1);
-      expect(result[0].callsign).toBe('AI101');
-      expect(result[0].from.code).toBe('BOM');
-      expect(result[0].to.code).toBe('DEL');
-      expect(result[0].source).toBe('AviationStack');
-    });
-
-    test('filters out non-live or missing coords', () => {
-      const data = {
-        data: [
-          { live: null },
-          { live: { latitude: null, longitude: 73.8 } },
-          { live: { latitude: 18.6, longitude: 73.8, is_ground: true } },
-        ],
-      };
-      const result = parseAviationStack(data, MOCK_USER_LAT, MOCK_USER_LON, MOCK_RADIUS);
-      expect(result).toHaveLength(1); // only the grounded one has coords but is filtered by radius? actually grounded is kept
-      // wait, is_ground doesn't filter out, only lat/lon missing
-      expect(result[0]).toBeDefined();
     });
   });
 

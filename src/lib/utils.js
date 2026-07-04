@@ -143,6 +143,21 @@ export const INDIA_AIRPORTS = [
   { code: 'GOI', name: 'Goa Dabolim', lat: 15.3808, lon: 73.8314 },
   { code: 'COK', name: 'Kochi Intl', lat: 10.1518, lon: 76.3926 },
   { code: 'AMD', name: 'Ahmedabad', lat: 23.0722, lon: 72.6346 },
+  // Additional Maharashtra Airports
+  { code: 'NAG', name: 'Nagpur', lat: 21.0922, lon: 79.0472 },
+  { code: 'ISK', name: 'Nashik', lat: 20.1192, lon: 73.9125 },
+  { code: 'IXU', name: 'Aurangabad', lat: 19.8632, lon: 75.3981 },
+  { code: 'SAG', name: 'Shirdi', lat: 19.6865, lon: 74.3794 },
+  { code: 'KLH', name: 'Kolhapur', lat: 16.6669, lon: 74.2881 },
+  { code: 'JLQ', name: 'Jalgaon', lat: 20.9639, lon: 75.5269 },
+  { code: 'NDC', name: 'Nanded', lat: 19.1824, lon: 77.3188 },
+  // Other Major Indian Airports
+  { code: 'TRV', name: 'Thiruvananthapuram', lat: 8.4821, lon: 76.9201 },
+  { code: 'LKO', name: 'Lucknow', lat: 26.7606, lon: 80.8893 },
+  { code: 'JAI', name: 'Jaipur', lat: 26.8242, lon: 75.8122 },
+  { code: 'CNN', name: 'Kannur', lat: 11.9163, lon: 75.5463 },
+  { code: 'SXR', name: 'Srinagar', lat: 33.9986, lon: 74.7743 },
+  { code: 'BBI', name: 'Bhubaneswar', lat: 20.2444, lon: 85.8178 },
 ];
 
 export const GLOBAL_AIRPORTS = [

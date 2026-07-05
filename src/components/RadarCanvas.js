@@ -7,8 +7,13 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
   const canvasRef = useRef(null);
   const animRefRef = useRef(null);
   const sweepRef = useRef(0);
+  const stateRef = useRef({ flights, selectedFlight, userLat, userLon, radius, trailsRef });
 
-  const getExtrapolatedPosition = (f, now) => {
+  useEffect(() => {
+    stateRef.current = { flights, selectedFlight, userLat, userLon, radius, trailsRef };
+  }, [flights, selectedFlight, userLat, userLon, radius, trailsRef]);
+
+  const getExtrapolatedPosition = (f, now, userLatOverride, userLonOverride) => {
     const elapsedSec = Math.max(0, (now - (f.lastUpdated || now)) / 1000);
     const speedKmh = (f.speed || 0) * 1.852;
     const distanceKm = (speedKmh / 3600) * elapsedSec;
@@ -21,8 +26,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     return {
       lat: currentLat,
       lon: currentLon,
-      distKm: haversine(userLat, userLon, currentLat, currentLon),
-      bearing: bearing(userLat, userLon, currentLat, currentLon),
+      distKm: haversine(userLatOverride || userLat, userLonOverride || userLon, currentLat, currentLon),
+      bearing: bearing(userLatOverride || userLat, userLonOverride || userLon, currentLat, currentLon),
     };
   };
 
@@ -52,6 +57,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const cy = s / 2;
       const maxR = s * 0.46;
 
+      const { radius: currentRadius } = stateRef.current;
+
       ctx.clearRect(0, 0, s, s);
       // Semi-transparent dark overlay so map tiles show through
       ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
@@ -65,7 +72,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        const km = (radius * r).toFixed(1).replace('.0', '');
+        const km = (currentRadius * r).toFixed(1).replace('.0', '');
         ctx.fillStyle = 'rgba(0,200,255,0.16)';
         ctx.font = `${s * 0.019}px Courier New`;
         ctx.textAlign = 'left';
@@ -117,14 +124,15 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       ctx.restore();
 
       const now = Date.now();
+      const { userLat: curLat, userLon: curLon, radius: curRad, trailsRef: curTrails, flights: curFlights, selectedFlight: curSelFlight } = stateRef.current;
 
       // Draw airports
       ALL_AIRPORTS.forEach(airport => {
-        const d = haversine(userLat, userLon, airport.lat, airport.lon);
-        if (d > radius) return;
+        const d = haversine(curLat, curLon, airport.lat, airport.lon);
+        if (d > curRad) return;
 
-        const b = bearing(userLat, userLon, airport.lat, airport.lon);
-        const px = (d / radius) * maxR;
+        const b = bearing(curLat, curLon, airport.lat, airport.lon);
+        const px = (d / curRad) * maxR;
         const ax = cx + px * Math.cos(degreesToRadians(b - 90));
         const ay = cy + px * Math.sin(degreesToRadians(b - 90));
 
@@ -143,11 +151,11 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       });
 
       // Draw flight trails
-      if (trailsRef?.current) {
+      if (curTrails?.current) {
         const project = (lat, lon) => {
-          const d = haversine(userLat, userLon, lat, lon);
-          const b = bearing(userLat, userLon, lat, lon);
-          const px = (d / radius) * maxR;
+          const d = haversine(curLat, curLon, lat, lon);
+          const b = bearing(curLat, curLon, lat, lon);
+          const px = (d / curRad) * maxR;
           return {
             x: cx + px * Math.cos(degreesToRadians(b - 90)),
             y: cy + px * Math.sin(degreesToRadians(b - 90)),
@@ -157,7 +165,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         trailsRef.current.forEach((pts) => {
           if (pts.length < 2) return;
           const coords = pts.map(p => project(p.lat, p.lon));
-          const cutoff = coords.filter(c => c.dist <= radius);
+          const cutoff = coords.filter(c => c.dist <= curRad);
           if (cutoff.length < 2) return;
           for (let i = 1; i < cutoff.length; i++) {
             const t = i / cutoff.length;
@@ -197,12 +205,12 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       };
 
       // Draw aircraft
-      flights.forEach(f => {
-        const pos = getExtrapolatedPosition(f, now);
-        const px = (pos.distKm / radius) * maxR;
+      curFlights.forEach(f => {
+        const pos = getExtrapolatedPosition(f, now, curLat, curLon);
+        const px = (pos.distKm / curRad) * maxR;
         const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
         const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
-        const isSel = selectedFlight && selectedFlight.id === f.id;
+        const isSel = curSelFlight && curSelFlight.id === f.id;
         const col = isSel ? '#ffb300' : f.altitude < 3000 ? '#ff3b3b' : f.onGround ? '#ffb300' : '#00ff9d';
         
         const { category, sizeMult } = getAircraftVisuals(f);
@@ -312,7 +320,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       if (animRefRef.current) cancelAnimationFrame(animRefRef.current);
       ro.disconnect();
     };
-  }, [flights, selectedFlight, radius, userLat, userLon, trailsRef]);
+  }, []);
 
   const handleCanvasClick = (e) => {
     if (!onSelectFlight || !canvasRef.current) return;
@@ -329,9 +337,11 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     let minDist = Infinity;
     const now = Date.now();
 
-    flights.forEach(f => {
-      const pos = getExtrapolatedPosition(f, now);
-      const px = (pos.distKm / radius) * maxR;
+    const { flights: currFlights, userLat: cLat, userLon: cLon, radius: cRad } = stateRef.current;
+
+    currFlights.forEach(f => {
+      const pos = getExtrapolatedPosition(f, now, cLat, cLon);
+      const px = (pos.distKm / cRad) * maxR;
       const bx = cx + px * Math.cos(degreesToRadians(pos.bearing - 90));
       const by = cy + px * Math.sin(degreesToRadians(pos.bearing - 90));
       const dx = clickX - bx;

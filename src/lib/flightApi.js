@@ -30,7 +30,7 @@ export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
 
         const altFt = s.alt_baro === 'ground' ? 0 : (s.alt_baro || s.alt_geom || 0);
         return {
-          id: s.hex || 'alv' + Math.random(),
+          id: s.hex || s.flight?.trim() || `alv-${Math.round(s.lat*100)}-${Math.round(s.lon*100)}`,
           callsign: (s.flight || '').trim() || s.hex?.toUpperCase() || '?',
           icao24: s.hex?.toUpperCase() || '',
           country: s.flag || '—',
@@ -75,7 +75,7 @@ export function parseADSBLol(data, userLat, userLon, radiusKm) {
 
         const altFt = s.alt_baro === 'ground' ? 0 : (s.alt_baro || s.alt_geom || 0);
         return {
-          id: s.hex || 'al' + Math.random(),
+          id: s.hex || s.flight?.trim() || s.r || `al-${Math.round(s.lat*100)}-${Math.round(s.lon*100)}`,
           callsign: (s.flight || '').trim() || s.r || s.hex?.toUpperCase() || '?',
           icao24: s.hex?.toUpperCase() || '',
           country: s.r ? 'Encoded' : '—',

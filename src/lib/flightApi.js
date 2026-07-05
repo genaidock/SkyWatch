@@ -28,7 +28,7 @@ export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
         const dist = haversine(userLat, userLon, s.lat, s.lon);
         if (dist > radiusKm) return null;
 
-        const altFt = s.alt_baro || s.alt_geom || 0;
+        const altFt = s.alt_baro === 'ground' ? 0 : (s.alt_baro || s.alt_geom || 0);
         return {
           id: s.hex || 'alv' + Math.random(),
           callsign: (s.flight || '').trim() || s.hex?.toUpperCase() || '?',
@@ -42,7 +42,7 @@ export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
           speed: Math.round(s.gs || 0),
           heading: Math.round(s.track || 0),
           vertRate: Math.round(s.baro_rate || s.geom_rate || 0),
-          onGround: s.alt_baro === 'ground' || (s.gs || 0) < 30,
+          onGround: s.alt_baro === 'ground' || (altFt < 500 && (s.gs || 0) < 40),
           squawk: s.squawk || '—',
           type: s.t || '—',
           desc: s.desc || '',
@@ -73,7 +73,7 @@ export function parseADSBLol(data, userLat, userLon, radiusKm) {
         const dist = haversine(userLat, userLon, s.lat, s.lon);
         if (dist > radiusKm) return null;
 
-        const altFt = s.alt_baro || s.alt_geom || 0;
+        const altFt = s.alt_baro === 'ground' ? 0 : (s.alt_baro || s.alt_geom || 0);
         return {
           id: s.hex || 'al' + Math.random(),
           callsign: (s.flight || '').trim() || s.r || s.hex?.toUpperCase() || '?',
@@ -87,7 +87,7 @@ export function parseADSBLol(data, userLat, userLon, radiusKm) {
           speed: Math.round(s.gs || 0),
           heading: Math.round(s.track || 0),
           vertRate: Math.round(s.baro_rate || s.geom_rate || 0),
-          onGround: s.alt_baro === 'ground' || (s.gs || 0) < 30,
+          onGround: s.alt_baro === 'ground' || (altFt < 500 && (s.gs || 0) < 40),
           squawk: s.squawk || '—',
           type: s.t || '—',
           desc: s.desc || '',

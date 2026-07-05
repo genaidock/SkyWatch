@@ -30,8 +30,27 @@ const initialState = {
 
 function flightReducer(state, action) {
   switch (action.type) {
-    case 'SET_FLIGHTS':
-      return { ...state, flights: action.payload };
+    case 'SET_FLIGHTS': {
+      const now = Date.now();
+      const RETENTION_MS = 25000; // Keep planes for 25s even if missing from one fetch
+      
+      const newFlights = action.payload;
+      const mergedMap = new Map();
+
+      // Retain old flights if they are recent
+      for (const old of state.flights) {
+        if (now - (old.lastUpdated || now) < RETENTION_MS) {
+          mergedMap.set(old.id, old);
+        }
+      }
+
+      // Overwrite with fresh data
+      for (const fresh of newFlights) {
+        mergedMap.set(fresh.id, fresh);
+      }
+
+      return { ...state, flights: Array.from(mergedMap.values()) };
+    }
     case 'SET_SELECTED_FLIGHT':
       return { ...state, selectedFlight: action.payload };
     case 'SET_LOCATION':
@@ -256,9 +275,11 @@ export function FlightProvider({ children }) {
       trails.set(key, pts);
     }
     // Prune stale trails for flights no longer seen
-    const seenSet = new Set(timestamped.map(f => f.icao24 || f.callsign || f.id));
-    trails.forEach((_, trailKey) => {
-      if (!seenSet.has(trailKey)) trails.delete(trailKey);
+    trails.forEach((pts, trailKey) => {
+      const lastTs = pts[pts.length - 1]?.ts || 0;
+      if (now - lastTs > 30000) {
+        trails.delete(trailKey);
+      }
     });
   }, [setFlights, setApiStatus, runAlerts]);
 

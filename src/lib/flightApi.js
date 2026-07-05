@@ -341,22 +341,33 @@ export async function enrichRoutes(flights) {
     // Create promise and store to dedupe concurrent attempts
     ROUTE_PROMISES[cs] = (async () => {
       try {
-        const targetUrl = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(key)}`;
-        const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-        const response = await fetchWithTimeout(url, 5000);
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            // Back off for 60 seconds on rate limit
-            RATE_LIMITED_UNTIL = Date.now() + 60_000;
+        let route = null;
+        const fetchRouteFor = async (callsignToTry) => {
+          const targetUrl = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(callsignToTry)}`;
+          const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+          const response = await fetchWithTimeout(url, 5000);
+          
+          if (!response.ok) {
+            if (response.status === 429) {
+              RATE_LIMITED_UNTIL = Date.now() + 60_000;
+            }
+            return null;
           }
-          // store a short negative cache to avoid immediate retries
-          ROUTE_CACHE[cs] = { dep: '', arr: '', ts: Date.now() };
-          return;
+          const data = await response.json();
+          return data.response?.flightroute || null;
+        };
+
+        route = await fetchRouteFor(key);
+
+        // Fallback for suffixed callsigns (e.g. IGO512W -> IGO512)
+        if (!route && Date.now() > RATE_LIMITED_UNTIL) {
+          const match = key.match(/^([A-Z]{3})(\d{1,4})[A-Z]+$/);
+          if (match) {
+            const baseCallsign = match[1] + match[2];
+            route = await fetchRouteFor(baseCallsign);
+          }
         }
 
-        const data = await response.json();
-        const route = data.response?.flightroute;
         if (!route) {
           ROUTE_CACHE[cs] = { dep: '', arr: '', ts: Date.now() };
           return;

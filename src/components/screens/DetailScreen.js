@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
 import { getAircraftInfo } from '@/lib/utils';
 import { fetchAircraftDetails } from '@/lib/flightApi';
+import airlineMappings from '@/lib/airlineMappings.json';
 
 function DetailItem({ label, value }) {
   return (
@@ -60,11 +61,18 @@ export default function DetailScreen({ onBack }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-tdim uppercase tracking-widest">Route</div>
+          <div className="relative flex items-center justify-center mb-4 mt-1 min-h-[40px]">
+            <div className="absolute left-0 text-xs text-tdim uppercase tracking-widest">Route</div>
             {f.airlineObj && (
-              <div className="text-[10px] text-cyan font-mono bg-cyan/10 px-2 py-0.5 rounded border border-cyan/20">
-                {f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}
+              <div className="flex items-center gap-3 text-sm text-cyan font-mono bg-cyan/10 px-4 py-2 rounded-xl border border-cyan/20 shadow-sm">
+                {(airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]) && (
+                  <img 
+                    src={`/airlines/assets/${airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]}/icon.svg`} 
+                    alt={f.airlineObj.name} 
+                    className="h-6 w-auto object-contain"
+                  />
+                )}
+                <span>{f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}</span>
               </div>
             )}
           </div>

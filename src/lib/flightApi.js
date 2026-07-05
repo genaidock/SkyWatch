@@ -152,6 +152,56 @@ export function parseAirLabs(data, userLat, userLon, radiusKm) {
   }
 }
 
+export function parseOpenSky(data, userLat, userLon, radiusKm) {
+  try {
+    const states = data.states || [];
+    return states
+      .filter(s => s[6] != null && s[5] != null)
+      .map(s => {
+        const lat = s[6];
+        const lon = s[5];
+        const dist = haversine(userLat, userLon, lat, lon);
+        if (dist > radiusKm) return null;
+
+        const altM = s[7] || s[13] || 0;
+        const altFt = altM * 3.28084;
+        const velocity = s[9] || 0;
+        const speedKnots = velocity * 1.94384;
+        const vertRate = s[11] || 0;
+        const vertRateFtMin = vertRate * 196.85;
+
+        return {
+          id: s[0] || s[1]?.trim() || `os-${Math.round(lat*100)}-${Math.round(lon*100)}`,
+          callsign: (s[1] || '').trim() || s[0]?.toUpperCase() || '?',
+          icao24: s[0]?.toUpperCase() || '',
+          country: s[2] || '—',
+          reg: '—', // OpenSky doesn't provide registration directly in states
+          lat,
+          lon,
+          altitude: Math.round(altFt),
+          altM: Math.round(altM),
+          speed: Math.round(speedKnots),
+          heading: Math.round(s[10] || 0),
+          vertRate: Math.round(vertRateFtMin),
+          onGround: !!s[8],
+          squawk: s[14] || '—',
+          type: '—',
+          distKm: dist,
+          from: { code: '—', city: '—' },
+          to: { code: '—', city: '—' },
+          progress: 0.5,
+          firstSeen: new Date(s[4] ? s[4] * 1000 : Date.now()),
+          source: 'OpenSky',
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distKm - b.distKm);
+  } catch (e) {
+    console.warn('parseOpenSky error:', e);
+    return [];
+  }
+}
+
 // Main fetch function - call this from your component
 export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs = {}, apiKeys = {}) {
   if (!userLat || !userLon) return [];
@@ -308,7 +358,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
   });
 }
 
-// Enrich routes using adsbdb.com API
+// Enrich routes using our new server-side endpoint
 export async function enrichRoutes(flights) {
   const toFetch = flights.filter(
     f =>
@@ -317,92 +367,41 @@ export async function enrichRoutes(flights) {
       f.callsign !== '?'
   );
 
-  // If we're currently rate-limited, skip external calls
-  if (Date.now() < RATE_LIMITED_UNTIL) {
-    return applyRouteCache(flights);
-  }
+  if (toFetch.length === 0) return flights;
 
-  // Deduplicate callsigns and limit to 8 per run
-  const unique = Array.from(new Set(toFetch.map(f => f.callsign))).slice(0, 8);
-
-  // Sequentially fetch to avoid bursts
-  for (const cs of unique) {
-    const key = cs.replace(/\s/g, '');
-    // Skip if cached and fresh
-    const cached = ROUTE_CACHE[cs];
-    if (cached && Date.now() - cached.ts < ROUTE_TTL) continue;
-
-    // If there's an in-flight promise, await it
-    if (ROUTE_PROMISES[cs]) {
-      try { await ROUTE_PROMISES[cs]; } catch (e) { /* ignore */ }
-      continue;
-    }
-
-    // Create promise and store to dedupe concurrent attempts
-    ROUTE_PROMISES[cs] = (async () => {
-      try {
-        let route = null;
-        const fetchRouteFor = async (callsignToTry) => {
-          const targetUrl = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(callsignToTry)}`;
-          const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-          const response = await fetchWithTimeout(url, 5000);
-          
-          if (!response.ok) {
-            if (response.status === 429) {
-              RATE_LIMITED_UNTIL = Date.now() + 60_000;
-            }
-            return null;
+  const callsigns = Array.from(new Set(toFetch.map(f => f.callsign)));
+  
+  try {
+    const res = await fetch('/api/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callsigns })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.routes) {
+        Object.keys(data.routes).forEach(cs => {
+          const route = data.routes[cs];
+          if (route) {
+            ROUTE_CACHE[cs] = {
+              dep: route.dep || '',
+              depName: route.depName || route.dep || '',
+              depLat: route.depLat || null,
+              depLon: route.depLon || null,
+              arr: route.arr || '',
+              arrName: route.arrName || route.arr || '',
+              arrLat: route.arrLat || null,
+              arrLon: route.arrLon || null,
+              airline: route.airline || null,
+              ts: Date.now(),
+            };
           }
-          const data = await response.json();
-          return data.response?.flightroute || null;
-        };
-
-        route = await fetchRouteFor(key);
-
-        // Fallback for suffixed callsigns (e.g. IGO512W -> IGO512)
-        if (!route && Date.now() > RATE_LIMITED_UNTIL) {
-          const match = key.match(/^([A-Z]{3})(\d{1,4})[A-Z]+$/);
-          if (match) {
-            const baseCallsign = match[1] + match[2];
-            route = await fetchRouteFor(baseCallsign);
-          }
-        }
-
-        if (!route) {
-          ROUTE_CACHE[cs] = { dep: '', arr: '', ts: Date.now() };
-          return;
-        }
-
-        ROUTE_CACHE[cs] = {
-          dep: route.origin?.iata_code || route.origin?.icao_code || '',
-          depName: (route.origin?.municipality && route.origin?.name) ? `${route.origin.municipality} - ${route.origin.name}` : (route.origin?.name || route.origin?.municipality || ''),
-          depLat: route.origin?.latitude || null,
-          depLon: route.origin?.longitude || null,
-          arr: route.destination?.iata_code || route.destination?.icao_code || '',
-          arrName: (route.destination?.municipality && route.destination?.name) ? `${route.destination.municipality} - ${route.destination.name}` : (route.destination?.name || route.destination?.municipality || ''),
-          arrLat: route.destination?.latitude || null,
-          arrLon: route.destination?.longitude || null,
-          airline: route.airline || null,
-          ts: Date.now(),
-        };
-      } catch (e) {
-        // on network error, set a short negative cache
-        ROUTE_CACHE[cs] = { dep: '', arr: '', ts: Date.now() };
-      } finally {
-        // small pause between requests to reduce burstiness
-        await sleep(150);
-        delete ROUTE_PROMISES[cs];
+        });
       }
-    })();
-
-    try {
-      await ROUTE_PROMISES[cs];
-    } catch (e) {
-      // ignore per-call errors
     }
-
-    // If rate-limited, stop issuing more requests
-    if (Date.now() < RATE_LIMITED_UNTIL) break;
+  } catch (e) {
+    console.error('Error batch fetching routes:', e);
   }
 
   return applyRouteCache(flights);
@@ -411,7 +410,7 @@ export async function enrichRoutes(flights) {
 function applyRouteCache(flights) {
   return flights.map(f => {
     const cached = ROUTE_CACHE[f.callsign];
-    if (cached && Date.now() - cached.ts < ROUTE_TTL) {
+    if (cached) {
       const updated = { ...f };
       if (cached.dep) {
         updated.from = { code: cached.dep, city: cached.depName };

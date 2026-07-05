@@ -4,6 +4,7 @@ import {
   parseAirplanesLive,
   parseADSBLol,
   parseAirLabs,
+  parseOpenSky,
   uniqueFlights,
 } from '@/lib/flightApi';
 
@@ -55,6 +56,7 @@ export async function GET(request) {
   const enabledAPIs = {
     airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
+    opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
 
@@ -95,6 +97,15 @@ export async function GET(request) {
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseAirLabs(d, lat, lon, radiusKm) : [])
         .catch((e) => { console.error("AirLabs error:", e); return []; })
+    );
+  }
+
+  if (enabledAPIs.opensky) {
+    fetchers.push(
+      fetchWithTimeout(`https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseOpenSky(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
     );
   }
 

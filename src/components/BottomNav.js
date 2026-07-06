@@ -3,7 +3,7 @@
 export default function BottomNav({ currentScreen, onScreenChange }) {
   const screens = [
     { id: 'radar', icon: '🛰️', label: 'RADAR' },
-    { id: 'flights', icon: '✈️', label: 'FLIGHTS' },
+    { id: 'flybys', icon: '🔭', label: 'FLYBYS' },
     { id: 'alerts', icon: '🔔', label: 'ALERTS' },
     { id: 'settings', icon: '⚙️', label: 'SETTINGS' },
   ];

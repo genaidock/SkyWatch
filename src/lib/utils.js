@@ -300,3 +300,47 @@ export function isCloudflareBlock(statusCode, headers) {
   if (statusCode !== 403) return false;
   return Boolean(headers.get('cf-mitigated'));
 }
+
+export function calculateFlybys(flights, userLat, userLon, maxRadiusKm = 15) {
+  const flybys = [];
+  
+  for (const f of flights) {
+    if (!f.lat || !f.lon || f.speed <= 0 || f.track === undefined) continue;
+    
+    // Distance and bearing from aircraft to user
+    const d = haversine(f.lat, f.lon, userLat, userLon);
+    const bToUser = bearing(f.lat, f.lon, userLat, userLon);
+    
+    // Relative angle between aircraft track and direction to user
+    const thetaRad = degreesToRadians(f.track - bToUser);
+    
+    // Along-track distance (positive means moving towards closest point)
+    const dAt = d * Math.cos(thetaRad);
+    
+    // Cross-track distance (distance at closest approach)
+    const dXt = d * Math.abs(Math.sin(thetaRad));
+    
+    // Check if it's moving towards us and will pass within maxRadiusKm
+    if (dAt > 0 && dXt <= maxRadiusKm) {
+      // Speed in km/h
+      const speedKmh = f.speed * 1.852;
+      // ETA in minutes
+      const etaMin = (dAt / speedKmh) * 60;
+      
+      // Calculate approach direction (bearing from user to aircraft)
+      const approachBearing = bearing(userLat, userLon, f.lat, f.lon);
+      const approachDir = headingToDirection(approachBearing);
+      
+      flybys.push({
+        ...f,
+        cpaDist: dXt, // km
+        etaMin: etaMin, // minutes
+        approachDir: approachDir
+      });
+    }
+  }
+  
+  // Sort by ETA ascending
+  flybys.sort((a, b) => a.etaMin - b.etaMin);
+  return flybys;
+}

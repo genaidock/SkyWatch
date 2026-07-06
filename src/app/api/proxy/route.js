@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getApiKeys } from '@/lib/redis';
+import { getApiKeys, getRedis, rateLimit } from '@/lib/redis';
 
 const ALLOWED_HOSTS = new Set([
   'api.airplanes.live',
@@ -43,6 +43,17 @@ export async function GET(request) {
 
   if (!targetUrl) {
     return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
+  }
+
+  // Rate limiting
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const rateLimitKey = `ratelimit:proxy:${clientIp}`;
+  const { allowed, count } = await rateLimit(rateLimitKey, 60, 60); // 60 requests per minute
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Try again later.' },
+      { status: 429, headers: { 'Retry-After': '60', 'X-RateLimit-Remaining': '0' } }
+    );
   }
 
   let parsed;

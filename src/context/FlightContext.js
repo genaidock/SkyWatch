@@ -16,10 +16,11 @@ const initialState = {
   apiStatus: { type: 'demo', message: 'Initializing...' },
   alerts: [],
   enabledAPIs: {
-    airplaneslive: true,
-    adsblol: true,
-    airlabs: false,
-  },
+      airplaneslive: true,
+      adsblol: true,
+      opensky: true,
+      airlabs: false,
+    },
   apiKeys: {
     airLabs: '',
   },
@@ -257,31 +258,38 @@ export function FlightProvider({ children }) {
   }, [addAlert]);
 
   const processFlightData = useCallback(async (rawFlights) => {
-    const enriched = await enrichRoutes(rawFlights);
-    const timestamped = enriched.map(f => ({ ...f, lastUpdated: Date.now() }));
-    setFlights(timestamped);
-    setApiStatus('ok', `Tracking ${enriched.length} flights`);
-    runAlerts(timestamped);
+      const enriched = await enrichRoutes(rawFlights);
+      const timestamped = enriched.map(f => ({ ...f, lastUpdated: Date.now() }));
+      setFlights(timestamped);
+      setApiStatus('ok', `Tracking ${enriched.length} flights`);
+      runAlerts(timestamped);
 
-    // Update trails
-    const trails = trailsRef.current;
-    const now = Date.now();
-    for (const f of timestamped) {
-      const key = f.icao24 || f.callsign || f.id;
-      let pts = trails.get(key) || [];
-      pts.push({ lat: f.lat, lon: f.lon, ts: now });
-      // Keep positions within the last 3 minutes, max 60 points
-      pts = pts.filter(p => now - p.ts < 180000).slice(-60);
-      trails.set(key, pts);
-    }
-    // Prune stale trails for flights no longer seen
-    trails.forEach((pts, trailKey) => {
-      const lastTs = pts[pts.length - 1]?.ts || 0;
-      if (now - lastTs > 30000) {
-        trails.delete(trailKey);
+      // Update trails
+      const trails = trailsRef.current;
+      const now = Date.now();
+      const MAX_TOTAL_TRAILS = 200; // Safety cap to prevent unbounded growth
+      for (const f of timestamped) {
+        const key = f.icao24 || f.callsign || f.id;
+        let pts = trails.get(key) || [];
+        pts.push({ lat: f.lat, lon: f.lon, ts: now });
+        // Keep positions within the last 3 minutes, max 60 points
+        pts = pts.filter(p => now - p.ts < 180000).slice(-60);
+        trails.set(key, pts);
       }
-    });
-  }, [setFlights, setApiStatus, runAlerts]);
+      // Prune stale trails for flights no longer seen
+      trails.forEach((pts, trailKey) => {
+        const lastTs = pts[pts.length - 1]?.ts || 0;
+        if (now - lastTs > 30000) {
+          trails.delete(trailKey);
+        }
+      });
+      // Safety: if too many trails, remove oldest by last timestamp
+      if (trails.size > MAX_TOTAL_TRAILS) {
+        const sorted = Array.from(trails.entries()).sort((a, b) => (a[1][a[1].length - 1]?.ts || 0) - (b[1][b[1].length - 1]?.ts || 0));
+        const toRemove = sorted.slice(0, trails.size - MAX_TOTAL_TRAILS);
+        toRemove.forEach(([key]) => trails.delete(key));
+      }
+    }, [setFlights, setApiStatus, runAlerts]);
 
   // Polling fallback (used when SSE is unavailable)
   const pollFlights = useCallback(async (override = {}) => {
@@ -299,48 +307,76 @@ export function FlightProvider({ children }) {
   }, [state.userLat, state.userLon, state.radius, state.enabledAPIs, setApiStatus, processFlightData, addAlert]);
 
   // SSE for real-time updates
-  useEffect(() => {
-    const canSSE = typeof window !== 'undefined' && window.EventSource && !sseActive.current;
-    if (!canSSE) return;
+    useEffect(() => {
+      const canSSE = typeof window !== 'undefined' && window.EventSource && !sseActive.current;
+      if (!canSSE) return;
 
-    const params = new URLSearchParams({
-      lat: state.userLat.toFixed(4),
-      lon: state.userLon.toFixed(4),
-      radius: String(state.radius),
-    });
-    for (const [key, val] of Object.entries(state.enabledAPIs)) {
-      params.set(key, String(!!val));
-    }
-    const url = `/api/flights/stream?${params}`;
-    const es = new EventSource(url);
-    let connected = false;
+      let reconnectAttempt = 0;
+      const MAX_RECONNECT_ATTEMPTS = 10;
+      const BASE_RECONNECT_DELAY = 1000; // 1 second
+      const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+      let reconnectTimer = null;
 
-    es.onopen = () => {
-      connected = true;
-      sseActive.current = true;
-    };
-
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.flights) {
-          processFlightData(data.flights);
+      const connect = () => {
+        const params = new URLSearchParams({
+          lat: state.userLat.toFixed(4),
+          lon: state.userLon.toFixed(4),
+          radius: String(state.radius),
+        });
+        for (const [key, val] of Object.entries(state.enabledAPIs)) {
+          params.set(key, String(!!val));
         }
-      } catch (e) {
-        console.error('SSE parse error:', e);
-      }
-    };
+        const url = `/api/flights/stream?${params}`;
+        const es = new EventSource(url);
+        let connected = false;
 
-    es.onerror = () => {
-      sseActive.current = false;
-      es.close();
-    };
+        es.onopen = () => {
+          connected = true;
+          sseActive.current = true;
+          reconnectAttempt = 0; // Reset on successful connection
+        };
 
-    return () => {
-      sseActive.current = false;
-      es.close();
-    };
-  }, [state.userLat, state.userLon, state.radius, processFlightData]);
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.flights) {
+              processFlightData(data.flights);
+            }
+          } catch (e) {
+            console.error('SSE parse error:', e);
+          }
+        };
+
+        es.onerror = () => {
+          sseActive.current = false;
+          es.close();
+        
+          // Exponential backoff reconnection
+          if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
+            const delay = Math.min(
+              BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempt) + Math.random() * 1000,
+              MAX_RECONNECT_DELAY
+            );
+            reconnectAttempt++;
+            console.log(`SSE reconnecting in ${delay}ms (attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS})`);
+            reconnectTimer = setTimeout(connect, delay);
+          } else {
+            console.error('SSE max reconnection attempts reached, falling back to polling');
+          }
+        };
+
+        // Store reference for cleanup
+        window.__skywatch_sse = es;
+      };
+
+      connect();
+
+      return () => {
+        sseActive.current = false;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        if (window.__skywatch_sse) window.__skywatch_sse.close();
+      };
+    }, [state.userLat, state.userLon, state.radius, processFlightData]);
 
   // Fallback polling (only runs if SSE is not active)
   useEffect(() => {

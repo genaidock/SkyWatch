@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRedis, getApiKeys } from '@/lib/redis';
+import { getRedis, getApiKeys, rateLimit } from '@/lib/redis';
 import {
   parseAirplanesLive,
   parseADSBLol,
@@ -10,6 +10,8 @@ import {
 
 const CACHE_TTL = 15;
 const FETCH_TIMEOUT = 8000;
+const RATE_LIMIT_MAX = 30; // requests per window
+const RATE_LIMIT_WINDOW = 60; // seconds
 
 function cacheKey(lat, lon, radius) {
   const rLat = Math.round(lat * 2) / 2;
@@ -36,6 +38,17 @@ export async function GET(request) {
 
   if (isNaN(lat) || isNaN(lon)) {
     return NextResponse.json({ error: 'Missing or invalid lat/lon' }, { status: 400 });
+  }
+
+  // Rate limiting
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const rateLimitKey = `ratelimit:flights:${clientIp}`;
+  const { allowed, count } = await rateLimit(rateLimitKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(RATE_LIMIT_WINDOW), 'X-RateLimit-Remaining': '0' } }
+    );
   }
 
   const redis = getRedis();

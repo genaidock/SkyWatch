@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getRedis } from '@/lib/redis';
+import { getRedis, rateLimit } from '@/lib/redis';
 
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 const FETCH_TIMEOUT = 5000;
+const MAX_CALLSIGNS_PER_REQUEST = 20;
+const MAX_CALLSIGN_LENGTH = 10;
+const CALLSIGN_REGEX = /^[A-Z0-9]{2,10}$/;
+const RATE_LIMIT_MAX = 10; // requests per window
+const RATE_LIMIT_WINDOW = 60; // seconds
 
 async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
   const controller = new AbortController();
@@ -47,13 +52,34 @@ async function fetchRouteExternal(callsign) {
 
 export async function POST(request) {
   try {
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rateLimitKey = `ratelimit:routes:${clientIp}`;
+    const { allowed } = await rateLimit(rateLimitKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(RATE_LIMIT_WINDOW), 'X-RateLimit-Remaining': '0' } }
+      );
+    }
+
     const { callsigns } = await request.json();
     if (!Array.isArray(callsigns) || callsigns.length === 0) {
       return NextResponse.json({ routes: {} });
     }
 
+    // Validate and sanitize callsigns
+    const sanitized = callsigns
+      .map(c => String(c).trim().toUpperCase().replace(/\s/g, ''))
+      .filter(c => c && CALLSIGN_REGEX.test(c) && c.length <= MAX_CALLSIGN_LENGTH)
+      .slice(0, MAX_CALLSIGNS_PER_REQUEST);
+
+    if (sanitized.length === 0) {
+      return NextResponse.json({ routes: {} });
+    }
+
     // Deduplicate
-    const unique = [...new Set(callsigns.map(c => c.trim().replace(/\s/g, '')))].filter(Boolean);
+    const unique = [...new Set(sanitized)];
     const redis = getRedis();
     const results = {};
     const toFetch = [];

@@ -161,18 +161,54 @@ export const INDIA_AIRPORTS = [
 ];
 
 export const GLOBAL_AIRPORTS = [
+  // North America
   { code: 'JFK', name: 'New York JFK', lat: 40.6413, lon: -73.7781 },
-  { code: 'LHR', name: 'London Heathrow', lat: 51.4700, lon: -0.4543 },
-  { code: 'DXB', name: 'Dubai Intl', lat: 25.2532, lon: 55.3657 },
   { code: 'LAX', name: 'Los Angeles Intl', lat: 33.9416, lon: -118.4085 },
-  { code: 'HND', name: 'Tokyo Haneda', lat: 35.5494, lon: 139.7798 },
+  { code: 'ORD', name: 'Chicago O\'Hare', lat: 41.9742, lon: -87.9073 },
+  { code: 'ATL', name: 'Atlanta Hartsfield', lat: 33.6407, lon: -84.4277 },
+  { code: 'DFW', name: 'Dallas/Fort Worth', lat: 32.8998, lon: -97.0403 },
+  { code: 'SFO', name: 'San Francisco Intl', lat: 37.6213, lon: -122.3790 },
+  { code: 'YYZ', name: 'Toronto Pearson', lat: 43.6777, lon: -79.6248 },
+  { code: 'YVR', name: 'Vancouver Intl', lat: 49.1967, lon: -123.1815 },
+  { code: 'MEX', name: 'Mexico City Intl', lat: 19.4361, lon: -99.0719 },
+  // Europe
+  { code: 'LHR', name: 'London Heathrow', lat: 51.4700, lon: -0.4543 },
   { code: 'CDG', name: 'Paris Charles de Gaulle', lat: 49.0097, lon: 2.5479 },
   { code: 'FRA', name: 'Frankfurt Intl', lat: 50.0333, lon: 8.5706 },
-  { code: 'SIN', name: 'Singapore Changi', lat: 1.3644, lon: 103.9915 },
-  { code: 'SYD', name: 'Sydney Kingsford', lat: -33.9399, lon: 151.1753 },
-  { code: 'BKK', name: 'Bangkok Suvarn', lat: 13.6811, lon: 100.7472 },
   { code: 'AMS', name: 'Amsterdam Schiphol', lat: 52.3105, lon: 4.7683 },
-  { code: 'YYZ', name: 'Toronto Pearson', lat: 43.6777, lon: -79.6248 },
+  { code: 'MAD', name: 'Madrid Barajas', lat: 40.4983, lon: -3.5676 },
+  { code: 'MUC', name: 'Munich Intl', lat: 48.3537, lon: 11.7861 },
+  { code: 'FCO', name: 'Rome Fiumicino', lat: 41.7999, lon: 12.2462 },
+  { code: 'IST', name: 'Istanbul Airport', lat: 41.2753, lon: 28.7520 },
+  // Asia
+  { code: 'HND', name: 'Tokyo Haneda', lat: 35.5494, lon: 139.7798 },
+  { code: 'NRT', name: 'Tokyo Narita', lat: 35.7647, lon: 140.3863 },
+  { code: 'PEK', name: 'Beijing Capital', lat: 40.0799, lon: 116.6031 },
+  { code: 'HKG', name: 'Hong Kong Intl', lat: 22.3080, lon: 113.9185 },
+  { code: 'SIN', name: 'Singapore Changi', lat: 1.3644, lon: 103.9915 },
+  { code: 'DXB', name: 'Dubai Intl', lat: 25.2532, lon: 55.3657 },
+  { code: 'DOH', name: 'Doha Hamad', lat: 25.2731, lon: 51.6080 },
+  { code: 'BKK', name: 'Bangkok Suvarnabhumi', lat: 13.6811, lon: 100.7472 },
+  { code: 'ICN', name: 'Seoul Incheon', lat: 37.4602, lon: 126.4407 },
+  { code: 'KUL', name: 'Kuala Lumpur Intl', lat: 2.7456, lon: 101.7099 },
+  { code: 'CGK', name: 'Jakarta Soekarno-Hatta', lat: -6.1256, lon: 106.6558 },
+  // Oceania
+  { code: 'SYD', name: 'Sydney Kingsford', lat: -33.9399, lon: 151.1753 },
+  { code: 'MEL', name: 'Melbourne Intl', lat: -37.6690, lon: 144.8410 },
+  { code: 'BNE', name: 'Brisbane Intl', lat: -27.3842, lon: 153.1175 },
+  { code: 'AKL', name: 'Auckland Intl', lat: -37.0082, lon: 174.7915 },
+  // South America
+  { code: 'GRU', name: 'São Paulo Guarulhos', lat: -23.4356, lon: -46.4731 },
+  { code: 'BOG', name: 'Bogotá El Dorado', lat: 4.7016, lon: -74.1469 },
+  { code: 'SCL', name: 'Santiago Arturo Merino', lat: -33.3930, lon: -70.7858 },
+  { code: 'EZE', name: 'Buenos Aires Ezeiza', lat: -34.8150, lon: -58.5348 },
+  // Africa
+  { code: 'JNB', name: 'Johannesburg OR Tambo', lat: -26.1367, lon: 28.2411 },
+  { code: 'CPT', name: 'Cape Town Intl', lat: -33.9715, lon: 18.6021 },
+  { code: 'CAI', name: 'Cairo Intl', lat: 30.1219, lon: 31.4056 },
+  { code: 'ADD', name: 'Addis Ababa Bole', lat: 8.9778, lon: 38.7993 },
+  { code: 'NBO', name: 'Nairobi Jomo Kenyatta', lat: -1.3192, lon: 36.9278 },
+  { code: 'CMN', name: 'Casablanca Mohammed V', lat: 33.3675, lon: -7.5899 },
 ];
 
 export const ALL_AIRPORTS = [...INDIA_AIRPORTS, ...GLOBAL_AIRPORTS];

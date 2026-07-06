@@ -37,26 +37,25 @@ export default function Home() {
     }
   };
 
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case 'radar':
-        return <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />;
-      case 'flights':
-        return <FlightsScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />;
-      case 'alerts':
-        return <AlertsScreen onSelectFlight={openFlightDetail} onShowToast={showToastMessage} />;
-      case 'settings':
-        return <SettingsScreen onShowToast={showToastMessage} />;
-      case 'detail':
-        return <DetailScreen onShowToast={showToastMessage} onBack={() => setCurrentScreen('radar')} />;
-      default:
-        return <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />;
-    }
-  };
-
   return (
     <div className="flex flex-col h-[100dvh] bg-bg text-text">
-      {renderScreen()}
+      <div className={currentScreen === 'radar' ? 'contents' : 'hidden'}>
+        <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />
+      </div>
+      <div className={currentScreen === 'flights' ? 'contents' : 'hidden'}>
+        <FlightsScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />
+      </div>
+      <div className={currentScreen === 'alerts' ? 'contents' : 'hidden'}>
+        <AlertsScreen onSelectFlight={openFlightDetail} onShowToast={showToastMessage} />
+      </div>
+      <div className={currentScreen === 'settings' ? 'contents' : 'hidden'}>
+        <SettingsScreen onShowToast={showToastMessage} />
+      </div>
+      
+      {currentScreen === 'detail' && (
+        <DetailScreen onShowToast={showToastMessage} onBack={() => setCurrentScreen('radar')} />
+      )}
+
       <BottomNav currentScreen={currentScreen} onScreenChange={setCurrentScreen} />
       <Toast message={toastMessage} show={showToast} />
       <LocationModal show={showLocationModal} onClose={() => setShowLocationModal(false)} />

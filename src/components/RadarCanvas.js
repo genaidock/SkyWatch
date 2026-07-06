@@ -172,8 +172,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
             ctx.beginPath();
             ctx.moveTo(cutoff[i - 1].x, cutoff[i - 1].y);
             ctx.lineTo(cutoff[i].x, cutoff[i].y);
-            ctx.strokeStyle = `rgba(0,255,157,${(1 - t) * 0.35})`;
-            ctx.lineWidth = 1.5 - t * 0.8;
+            ctx.strokeStyle = `rgba(0,255,157,${(1 - t) * 0.85})`;
+            ctx.lineWidth = 2.5 - t * 1.5;
             ctx.stroke();
           }
         });

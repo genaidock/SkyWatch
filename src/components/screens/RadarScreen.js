@@ -6,11 +6,9 @@ import Header from '@/components/Header';
 import StatBar from '@/components/StatBar';
 import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
-import dynamic from 'next/dynamic';
+import RadarMapBackground from '@/components/RadarMapBackground';
+import RadarCanvas from '@/components/RadarCanvas';
 import FlightCards from '@/components/FlightCards';
-
-const RadarMapBackground = dynamic(() => import('@/components/RadarMapBackground'), { ssr: false });
-const RadarCanvas = dynamic(() => import('@/components/RadarCanvas'), { ssr: false });
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
   const { state, trailsRef, recenterLocation } = useFlightContext();

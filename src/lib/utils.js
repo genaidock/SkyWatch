@@ -191,3 +191,76 @@ export function getNearbyAirports(lat, lon, maxKm) {
     .sort((a, b) => a.dist - b.dist)
     .map(a => a.code);
 }
+
+/**
+ * Retry policy with exponential backoff and jitter.
+ * Inspired by FlightRadarAPI request.js
+ */
+export class RetryPolicy {
+  /**
+   * @param {Object} options
+   * @param {number} [options.maxAttempts=3] - Total attempts including first
+   * @param {number} [options.baseDelayMs=1000] - First backoff in ms
+   * @param {number} [options.maxDelayMs=30000] - Cap for exponential backoff
+   * @param {number} [options.jitterMs=500] - Random ms added to each sleep
+   */
+  constructor({ maxAttempts = 3, baseDelayMs = 1000, maxDelayMs = 30000, jitterMs = 500 } = {}) {
+    if (maxAttempts < 1) throw new Error('maxAttempts must be >= 1');
+    if (baseDelayMs < 0 || maxDelayMs < 0 || jitterMs < 0) {
+      throw new Error('baseDelayMs, maxDelayMs and jitterMs must be >= 0');
+    }
+    this.maxAttempts = maxAttempts;
+    this.baseDelayMs = baseDelayMs;
+    this.maxDelayMs = maxDelayMs;
+    this.jitterMs = jitterMs;
+  }
+
+  /**
+   * @param {number} attemptIndex - Zero-based attempt index
+   * @return {number} ms to sleep before next attempt
+   */
+  sleepFor(attemptIndex) {
+    const delay = Math.min(this.baseDelayMs * (2 ** attemptIndex), this.maxDelayMs);
+    return delay + Math.random() * this.jitterMs;
+  }
+}
+
+/**
+ * Execute async function with retry policy.
+ * Retries on: network errors, timeout, 5xx, 429.
+ * @template T
+ * @param {() => Promise<T>} fn
+ * @param {RetryPolicy} [policy]
+ * @return {Promise<T>}
+ */
+export async function withRetry(fn, policy = new RetryPolicy()) {
+  let lastError;
+  for (let attempt = 0; attempt < policy.maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const isRetryable = err.name === 'AbortError' ||
+        err.name === 'TimeoutError' ||
+        (err.cause && (err.cause.code === 'UND_ERR_SOCKET' || err.cause.code === 'ECONNRESET' || err.cause.code === 'ETIMEDOUT')) ||
+        (err.status >= 500 && err.status < 600) ||
+        err.status === 429;
+
+      if (!isRetryable || attempt === policy.maxAttempts - 1) throw err;
+      await new Promise(resolve => setTimeout(resolve, policy.sleepFor(attempt)));
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Detect Cloudflare challenge/block response.
+ * @param {number} statusCode
+ * @param {Headers} headers
+ * @return {boolean}
+ */
+export function isCloudflareBlock(statusCode, headers) {
+  if (statusCode === 520) return true;
+  if (statusCode !== 403) return false;
+  return Boolean(headers.get('cf-mitigated'));
+}

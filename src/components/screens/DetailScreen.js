@@ -64,12 +64,12 @@ export default function DetailScreen({ onBack }) {
           <div className="relative flex items-center justify-center mb-4 mt-1 min-h-[40px]">
             <div className="absolute left-0 text-xs text-tdim uppercase tracking-widest">Route</div>
             {f.airlineObj && (
-              <div className="flex items-center gap-3 text-sm text-cyan font-mono bg-cyan/10 px-4 py-2 rounded-xl border border-cyan/20 shadow-sm">
+              <div className="flex items-center gap-3 text-sm text-slate-900 font-bold font-mono bg-white px-4 py-2 rounded-xl shadow-md">
                 {(airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]) && (
                   <img 
                     src={`/airlines/assets/${airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]}/icon.svg`} 
                     alt={f.airlineObj.name} 
-                    className="h-6 w-auto object-contain"
+                    className="h-8 w-auto object-contain"
                   />
                 )}
                 <span>{f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}</span>

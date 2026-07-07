@@ -45,8 +45,15 @@ function flightReducer(state, action) {
         }
       }
 
-      // Overwrite with fresh data
+      // Overwrite with fresh data, preserving previous position for smooth interpolation
       for (const fresh of newFlights) {
+        const existing = mergedMap.get(fresh.id);
+        if (existing) {
+          // Carry forward the old rendered position so the canvas can interpolate smoothly
+          fresh.prevLat = existing.lat;
+          fresh.prevLon = existing.lon;
+          fresh.prevHeading = existing.heading;
+        }
         mergedMap.set(fresh.id, fresh);
       }
 

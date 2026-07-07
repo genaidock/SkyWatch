@@ -115,20 +115,21 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const headingT = smoothFactor(0.005, dt); // very smooth heading rotation
     entry.displayHeading = lerpAngle(entry.displayHeading, entry.targetHeading, headingT);
 
-    // --- Position smoothing (exponential decay lerp toward API target) ---
+    // --- Dead reckoning: advance the TARGET position ---
+    // This ensures the target keeps moving between API updates, 
+    // rather than dragging the display position backward.
+    if (entry.speed > 0) {
+      const distKm = (entry.speed / 3600) * dt; // km traveled this frame
+      const targetHeadingRad = degreesToRadians(entry.targetHeading);
+      const targetLatRad = degreesToRadians(entry.targetLat);
+      entry.targetLat += (distKm * Math.cos(targetHeadingRad)) / 111.32;
+      entry.targetLon += (distKm * Math.sin(targetHeadingRad)) / (111.32 * Math.cos(targetLatRad));
+    }
+
+    // --- Position smoothing (exponential decay lerp toward moving target) ---
     const posT = smoothFactor(0.008, dt);
     entry.displayLat += (entry.targetLat - entry.displayLat) * posT;
     entry.displayLon += (entry.targetLon - entry.displayLon) * posT;
-
-    // --- Dead reckoning: continue moving from display position using speed + heading ---
-    // This ensures aircraft don't freeze between API updates
-    if (entry.speed > 0) {
-      const distKm = (entry.speed / 3600) * dt; // km traveled this frame
-      const headingRad = degreesToRadians(entry.displayHeading);
-      const latRad = degreesToRadians(entry.displayLat);
-      entry.displayLat += (distKm * Math.cos(headingRad)) / 111.32;
-      entry.displayLon += (distKm * Math.sin(headingRad)) / (111.32 * Math.cos(latRad));
-    }
 
     return {
       lat: entry.displayLat,

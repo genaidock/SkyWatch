@@ -159,8 +159,30 @@ export function FlightProvider({ children }) {
     dispatch({ type: 'SET_FLIGHTS', payload: flights });
   }, []);
 
-  const setSelectedFlight = useCallback((flight) => {
+  const setSelectedFlight = useCallback(async (flight) => {
     dispatch({ type: 'SET_SELECTED_FLIGHT', payload: flight });
+    
+    if (flight && flight.icao24) {
+      try {
+        const res = await fetch(`/api/proxy?url=${encodeURIComponent('https://api.airplanes.live/v2/trace/' + flight.icao24)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.trace && Array.isArray(data.trace)) {
+            // Airplanes.live trace format: [timestamp, lat, lon, ...]
+            const tracePts = data.trace.map(t => ({ lat: t[1], lon: t[2], ts: t[0] * 1000 }));
+            
+            // Keep points from last 60 minutes
+            const now = Date.now();
+            const recentTrace = tracePts.filter(p => now - p.ts < 3600000);
+            
+            const key = flight.icao24 || flight.callsign || flight.id;
+            trailsRef.current.set(key, recentTrace);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch historical trace', e);
+      }
+    }
   }, []);
 
   const setLocation = useCallback((lat, lon, label) => {
@@ -235,20 +257,16 @@ export function FlightProvider({ children }) {
     }
     for (const f of flights) {
       if (!alertedPlanes.current.has(f.id)) {
-        let category = null;
+        const category = f.category;
         let label = '';
-        const desc = (f.desc || '').toLowerCase();
-        const type = (f.type || '').toUpperCase();
         const sq = String(f.squawk || '');
-        if (sq === '7700') { category = 'emergency'; label = 'General Emergency'; }
-        else if (sq === '7600') { category = 'emergency'; label = 'Radio Failure'; }
-        else if (sq === '7500') { category = 'emergency'; label = 'Hijacking'; }
-        else if (/military|air force|navy|army|coast guard|nato/.test(desc) || /^(F16|F35|C17|C130|EUFI|B52)$/.test(type)) {
-          category = 'military'; label = 'Military Aircraft';
-        }
-        else if (/gulfstream|challenger|citation|falcon|learjet|legacy/.test(desc) || /^(GLF|C56|CL3|F2TH|E55|E50)/.test(type)) {
-          category = 'private'; label = 'Private Jet / VIP';
-        }
+        
+        if (sq === '7700') { label = 'General Emergency'; }
+        else if (sq === '7600') { label = 'Radio Failure'; }
+        else if (sq === '7500') { label = 'Hijacking'; }
+        else if (category === 'military') { label = 'Military Aircraft'; }
+        else if (category === 'private') { label = 'Private Jet / VIP'; }
+        else if (category === 'cargo') { label = 'Cargo Freighter'; }
         if (category) {
           addAlert({ message: `[${label}] ${f.callsign} (${f.type}) detected ${Math.round(f.distKm)}km away.`, category, flightId: f.id });
           alertedPlanes.current.set(f.id, now);

@@ -162,17 +162,26 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
             dist: d,
           };
         };
-        trailsRef.current.forEach((pts) => {
+        trailsRef.current.forEach((pts, key) => {
           if (pts.length < 2) return;
           const coords = pts.map(p => project(p.lat, p.lon));
           const cutoff = coords.filter(c => c.dist <= curRad);
           if (cutoff.length < 2) return;
+
+          // Determine color based on category
+          const f = curFlights.find(flight => flight.id === key || flight.icao24 === key || flight.callsign === key);
+          const category = f ? f.category : 'civil';
+          let rgb = '0,255,157'; // standard sea green
+          if (category === 'private') rgb = '0,229,255'; // neon cyan
+          else if (category === 'cargo') rgb = '255,136,0'; // orange
+          else if (category === 'military') rgb = '255,0,0'; // bright red
+
           for (let i = 1; i < cutoff.length; i++) {
             const t = i / cutoff.length;
             ctx.beginPath();
             ctx.moveTo(cutoff[i - 1].x, cutoff[i - 1].y);
             ctx.lineTo(cutoff[i].x, cutoff[i].y);
-            ctx.strokeStyle = `rgba(0,255,157,${(1 - t) * 0.85})`;
+            ctx.strokeStyle = `rgba(${rgb},${(1 - t) * 0.85})`;
             ctx.lineWidth = 2.5 - t * 1.5;
             ctx.stroke();
           }
@@ -183,12 +192,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const desc = (f.desc || '').toLowerCase();
         const type = (f.type || '').toUpperCase();
         
-        let category = 'civil';
-        if (/military|air force|navy|army|coast guard|nato|fighter|bomber/.test(desc) || /^(F16|F35|C17|C130|EUFI|B52|A400|V22)$/.test(type)) {
-          category = 'military';
-        } else if (/gulfstream|challenger|citation|falcon|learjet|legacy|bizjet/.test(desc) || /^(GLF|C56|CL3|F2TH|E55|E50|BE2|BE9|PC12|PC24)/.test(type)) {
-          category = 'private';
-        }
+        const category = f.category || 'civil';
 
         let sizeMult = 1.0;
         if (/^(A38|B74|B77|B78|A35|A34|A33|C5|C17|AN1)/.test(type) || desc.includes('heavy') || desc.includes('widebody')) {
@@ -282,6 +286,29 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         }
         ctx.closePath();
         ctx.fill();
+
+        // Draw tail lights for special categories
+        if (category === 'private' || category === 'cargo' || category === 'military') {
+          // Use neon cyan for private to improve contrast
+          const lightColor = category === 'private' ? '#00e5ff' : 
+                             category === 'cargo' ? '#ff8800' : 
+                             '#ff0000';
+          
+          // Flash effect based on time
+          const flash = Math.sin(now / 150) > 0.5 ? 1 : 0.4;
+          
+          ctx.beginPath();
+          // Base radius on screen size (s) rather than aircraft length (l) so it doesn't shrink too much
+          const lightRadius = s * 0.006;
+          ctx.arc(0, l * 1.9, lightRadius, 0, Math.PI * 2);
+          ctx.fillStyle = lightColor;
+          ctx.globalAlpha = flash;
+          ctx.shadowColor = lightColor;
+          ctx.shadowBlur = 18 * flash;
+          ctx.fill();
+          ctx.globalAlpha = 1.0; // reset
+        }
+
         ctx.restore();
 
         ctx.font = `${s * 0.018}px Courier New`;

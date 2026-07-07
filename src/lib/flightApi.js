@@ -314,7 +314,28 @@ export function uniqueFlights(flights) {
     };
     map.set(key, merged);
   });
-  return Array.from(map.values()).sort((a, b) => a.distKm - b.distKm);
+  return Array.from(map.values()).map(f => {
+    let category = null;
+    const desc = (f.desc || '').toLowerCase();
+    const type = (f.type || '').toUpperCase();
+    const callsign = (f.callsign || '').toUpperCase();
+    
+    // Cargo planes (FedEx, UPS, Atlas Air, Polar, ABX, Omni, Kalitta, Cargolux, Southern Air, Nippon Cargo, Polar Air)
+    if (/freighter|cargo/.test(desc) || /^(FDX|UPS|GTI|PAC|ABX|OAE|CKS|CLX|SOO|NCA|PO)/.test(callsign)) {
+      category = 'cargo';
+    } 
+    // Military planes
+    else if (/military|air force|navy|army|coast guard|nato/.test(desc) || /^(F16|F35|C17$|C17A|C130|EUFI|B52|E3TF|KC13)/.test(type) || /^(RCH|RFR|CNV)/.test(callsign)) {
+      category = 'military';
+    } 
+    // Private jets
+    else if (/gulfstream|challenger|citation|falcon|learjet|legacy/.test(desc) || /^(GLF|C56|CL3|F2TH|E55|E50|H25B|FA7X|FA8X)/.test(type)) {
+      category = 'private';
+    }
+    
+    f.category = category;
+    return f;
+  }).sort((a, b) => a.distKm - b.distKm);
 }
 
 export function generateDemoFlights(baseLat, baseLon, radius) {

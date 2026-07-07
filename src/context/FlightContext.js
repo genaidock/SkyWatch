@@ -332,7 +332,7 @@ export function FlightProvider({ children }) {
   // SSE for real-time updates
     useEffect(() => {
       const canSSE = typeof window !== 'undefined' && window.EventSource && !sseActive.current;
-      if (!canSSE) return;
+      if (!canSSE || state.userLat === null || state.userLon === null) return;
 
       let reconnectAttempt = 0;
       const MAX_RECONNECT_ATTEMPTS = 10;

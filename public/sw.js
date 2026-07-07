@@ -62,6 +62,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = request.url;
 
+  // Cache API only supports GET requests
+  if (request.method !== 'GET') return;
+
   // API requests: network-first with cache fallback
   if (shouldCacheApi(url)) {
     event.respondWith(

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
 import RadarScreen from '@/components/screens/RadarScreen';
-import FlybysScreen from '@/components/screens/FlybysScreen';
+import FlightsScreen from '@/components/screens/FlightsScreen';
 import AlertsScreen from '@/components/screens/AlertsScreen';
 import SettingsScreen from '@/components/screens/SettingsScreen';
 import DetailScreen from '@/components/screens/DetailScreen';
@@ -42,8 +42,8 @@ export default function Home() {
       <div className={currentScreen === 'radar' ? 'contents' : 'hidden'}>
         <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />
       </div>
-      <div className={currentScreen === 'flybys' ? 'contents' : 'hidden'}>
-        <FlybysScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />
+      <div className={currentScreen === 'flights' ? 'contents' : 'hidden'}>
+        <FlightsScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />
       </div>
       <div className={currentScreen === 'alerts' ? 'contents' : 'hidden'}>
         <AlertsScreen onSelectFlight={openFlightDetail} onShowToast={showToastMessage} />

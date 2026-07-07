@@ -159,30 +159,8 @@ export function FlightProvider({ children }) {
     dispatch({ type: 'SET_FLIGHTS', payload: flights });
   }, []);
 
-  const setSelectedFlight = useCallback(async (flight) => {
+  const setSelectedFlight = useCallback((flight) => {
     dispatch({ type: 'SET_SELECTED_FLIGHT', payload: flight });
-    
-    if (flight && flight.icao24) {
-      try {
-        const res = await fetch(`/api/proxy?url=${encodeURIComponent('https://api.airplanes.live/v2/trace/' + flight.icao24)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.trace && Array.isArray(data.trace)) {
-            // Airplanes.live trace format: [timestamp, lat, lon, ...]
-            const tracePts = data.trace.map(t => ({ lat: t[1], lon: t[2], ts: t[0] * 1000 }));
-            
-            // Keep points from last 60 minutes
-            const now = Date.now();
-            const recentTrace = tracePts.filter(p => now - p.ts < 3600000);
-            
-            const key = flight.icao24 || flight.callsign || flight.id;
-            trailsRef.current.set(key, recentTrace);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch historical trace', e);
-      }
-    }
   }, []);
 
   const setLocation = useCallback((lat, lon, label) => {

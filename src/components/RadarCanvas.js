@@ -65,10 +65,16 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const entry = interpMap.get(f.id);
 
       if (entry) {
-        // Flight already tracked — update targets (the display pos will lerp each frame)
-        entry.targetLat = f.lat;
-        entry.targetLon = f.lon;
-        entry.targetHeading = f.heading || 0;
+        // Flight already tracked
+        // Only update targets if the API actually gave us a physically new position.
+        // Otherwise, we keep dead-reckoning the existing target.
+        if (f.lat !== entry.lastApiLat || f.lon !== entry.lastApiLon) {
+          entry.targetLat = f.lat;
+          entry.targetLon = f.lon;
+          entry.targetHeading = f.heading || 0;
+          entry.lastApiLat = f.lat;
+          entry.lastApiLon = f.lon;
+        }
         entry.speed = (f.speed || 0) * 1.852; // knots → km/h
         entry.lastSeen = now;
       } else {
@@ -80,6 +86,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
           targetLat: f.lat,
           targetLon: f.lon,
           targetHeading: f.heading || 0,
+          lastApiLat: f.lat,
+          lastApiLon: f.lon,
           speed: (f.speed || 0) * 1.852,
           lastSeen: now,
         });

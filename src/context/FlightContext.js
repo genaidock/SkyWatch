@@ -8,9 +8,9 @@ const FlightContext = createContext();
 const initialState = {
   flights: [],
   selectedFlight: null,
-  userLat: 18.6020,
-  userLon: 73.7470,
-  locationLabel: 'GPS',
+  userLat: null,
+  userLon: null,
+  locationLabel: 'Acquiring GPS...',
   radius: 100,
   filter: 'all',
   apiStatus: { type: 'demo', message: 'Initializing...' },
@@ -33,7 +33,7 @@ function flightReducer(state, action) {
   switch (action.type) {
     case 'SET_FLIGHTS': {
       const now = Date.now();
-      const RETENTION_MS = 25000; // Keep planes for 25s even if missing from one fetch
+      const RETENTION_MS = 120000; // Keep planes for 120s even if missing from one fetch
       
       const newFlights = action.payload;
       const mergedMap = new Map();
@@ -113,16 +113,7 @@ export function FlightProvider({ children }) {
   const trailsRef = useRef(new Map());
 
   useEffect(() => {
-    // Load persisted location immediately
-    try {
-      const saved = localStorage.getItem('skywatch_location');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.lat && parsed.lon) {
-          dispatch({ type: 'SET_LOCATION', payload: { lat: parsed.lat, lon: parsed.lon, label: parsed.label || `Cached ${parsed.lat.toFixed(4)}, ${parsed.lon.toFixed(4)}` } });
-        }
-      }
-    } catch (e) { /* ignore */ }
+    if (typeof window === 'undefined') return;
 
     // Load persisted API keys so they remain visible for the admin
     try {
@@ -135,9 +126,35 @@ export function FlightProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !navigator?.geolocation) return;
+    if (typeof window === 'undefined' || !navigator?.geolocation) {
+      dispatch({ type: 'SET_LOCATION', payload: { lat: 18.6020, lon: 73.7470, label: 'Default (Pune)' } });
+      return;
+    }
+
+    const loadFallbackLocation = () => {
+      try {
+        const saved = localStorage.getItem('skywatch_location');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.lat && parsed.lon) {
+            dispatch({ type: 'SET_LOCATION', payload: { lat: parsed.lat, lon: parsed.lon, label: parsed.label || `Cached ${parsed.lat.toFixed(4)}, ${parsed.lon.toFixed(4)}` } });
+            return;
+          }
+        }
+      } catch (e) { /* ignore */ }
+      dispatch({ type: 'SET_LOCATION', payload: { lat: 18.6020, lon: 73.7470, label: 'Default (Pune)' } });
+    };
+
+    let resolved = false;
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        loadFallbackLocation();
+      }
+    }, 2500);
 
     const success = (pos) => {
+      resolved = true;
+      clearTimeout(timeoutId);
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
       dispatch({ type: 'SET_LOCATION', payload: { lat, lon, label: `GPS ${lat.toFixed(4)}, ${lon.toFixed(4)}` } });
@@ -145,6 +162,9 @@ export function FlightProvider({ children }) {
     };
 
     const error = (err) => {
+      resolved = true;
+      clearTimeout(timeoutId);
+      loadFallbackLocation();
       dispatch({ type: 'SET_API_STATUS', payload: { type: 'warning', message: 'Location unavailable' } });
     };
 

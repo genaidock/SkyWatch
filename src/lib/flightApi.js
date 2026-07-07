@@ -340,14 +340,15 @@ export function uniqueFlights(flights) {
 
 export function generateDemoFlights(baseLat, baseLon, radius) {
   const demos = [
-    { cs: 'AI101', from: 'BOM', to: 'DEL', alt: 35000, spd: 480, hdg: 350, type: 'A320' },
-    { cs: '6E202', from: 'PNQ', to: 'BLR', alt: 28000, spd: 420, hdg: 165, type: 'A321' },
-    { cs: 'UK303', from: 'BOM', to: 'HYD', alt: 31000, spd: 450, hdg: 120, type: 'B738' },
+    { cs: 'AI101', from: 'BOM', to: 'DEL', alt: 35000, spd: 480, hdg: 350, type: 'A320', cat: 'civil' },
+    { cs: 'FDX123', from: 'MEM', to: 'DXB', alt: 32000, spd: 450, hdg: 120, type: 'B77W', cat: 'cargo' },
+    { cs: 'RCH11', from: 'RMS', to: 'ADW', alt: 28000, spd: 420, hdg: 200, type: 'C17', cat: 'military' },
+    { cs: 'GLF5', from: 'TEB', to: 'VNY', alt: 41000, spd: 490, hdg: 270, type: 'GLF', cat: 'private' },
   ];
 
   return demos.map((d, i) => {
     const angle = (i / demos.length) * Math.PI * 2;
-    const dist = 30 + i * 12;
+    const dist = 30 + i * 15;
     const lat = baseLat + (dist / 111) * Math.cos(angle);
     const lon = baseLon + (dist / 111) * Math.sin(angle) / Math.cos((baseLat * Math.PI) / 180);
 
@@ -355,7 +356,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
       id: 'demo' + i,
       callsign: d.cs,
       icao24: 'DEMO' + i,
-      country: 'India',
+      country: 'Demo',
       reg: 'VT-DEMO',
       lat,
       lon,
@@ -367,6 +368,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
       onGround: false,
       squawk: '2000',
       type: d.type,
+      category: d.cat,
       distKm: dist,
       from: { code: d.from, city: d.from },
       to: { code: d.to, city: d.to },

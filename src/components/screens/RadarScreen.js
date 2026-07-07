@@ -46,12 +46,19 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
             background: '#040d14',
           }}
         >
-          {/* Layer 0 – Map tiles (always render to avoid hydration mismatch) */}
-          <RadarMapBackground
-            userLat={state.userLat}
-            userLon={state.userLon}
-            radius={state.radius}
-          />
+          {state.userLat === null ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#040d14] z-50">
+              <div className="w-12 h-12 border-4 border-cyan/20 border-t-cyan rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,200,255,0.5)]"></div>
+              <div className="text-cyan font-mono text-sm tracking-widest animate-pulse">ACQUIRING GPS...</div>
+            </div>
+          ) : (
+            <>
+              {/* Layer 0 – Map tiles (always render to avoid hydration mismatch) */}
+              <RadarMapBackground
+                userLat={state.userLat}
+                userLon={state.userLon}
+                radius={state.radius}
+              />
 
           {/* Layer 1 – Radar canvas (transparent bg, draws on top of map) */}
           <RadarCanvas
@@ -69,8 +76,9 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
             <div className="absolute top-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">N</div>
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">S</div>
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/40">E</div>
-            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/40">W</div>
           </div>
+            </>
+          )}
         </div>
 
         <div className="px-3 py-2">

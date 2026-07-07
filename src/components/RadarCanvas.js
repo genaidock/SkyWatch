@@ -25,8 +25,9 @@ function smoothFactor(decayRate, deltaSec) {
 // Sweep rotational speed: degrees per second (~19°/s ≈ one full revolution every ~19s)
 const SWEEP_DEG_PER_SEC = 19.2;
 
-// How long an entry can stay in the interp map without matching a live flight (ms)
-const INTERP_STALE_MS = 15000;
+// Keep stale interpolation data for 120s before removing it.
+// This allows planes that temporarily drop out of the ADSB feed to keep dead-reckoning.
+const INTERP_STALE_MS = 120000;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -66,15 +67,16 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
       if (entry) {
         // Flight already tracked
-        // Only update targets if the API actually gave us a physically new position.
+        // Only update physical position targets if the API actually gave us a physically new position.
         // Otherwise, we keep dead-reckoning the existing target.
         if (f.lat !== entry.lastApiLat || f.lon !== entry.lastApiLon) {
           entry.targetLat = f.lat;
           entry.targetLon = f.lon;
-          entry.targetHeading = f.heading || 0;
           entry.lastApiLat = f.lat;
           entry.lastApiLon = f.lon;
         }
+        // ALWAYS update heading and speed, even if position is stale, so dead-reckoning instantly reacts to turns
+        entry.targetHeading = f.heading || 0;
         entry.speed = (f.speed || 0) * 1.852; // knots → km/h
         entry.lastSeen = now;
       } else {

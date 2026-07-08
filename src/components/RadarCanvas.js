@@ -125,17 +125,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const headingT = smoothFactor(0.005, dt); // very smooth heading rotation
     entry.displayHeading = lerpAngle(entry.displayHeading, entry.targetHeading, headingT);
 
-    // --- Dead reckoning: advance the TARGET position ---
-    // This ensures the target keeps moving between API updates, 
-    // rather than dragging the display position backward.
-    if (entry.speed > 0) {
-      const distKm = (entry.speed / 3600) * dt; // km traveled this frame
-      const targetHeadingRad = degreesToRadians(entry.targetHeading);
-      const targetLatRad = degreesToRadians(entry.targetLat);
-      entry.targetLat += (distKm * Math.cos(targetHeadingRad)) / 111.32;
-      entry.targetLon += (distKm * Math.sin(targetHeadingRad)) / (111.32 * Math.cos(targetLatRad));
-    }
-
     // --- Position smoothing (exponential decay lerp toward moving target) ---
     const posT = smoothFactor(0.008, dt);
     entry.displayLat += (entry.targetLat - entry.displayLat) * posT;
@@ -276,43 +265,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.fillText(airport.code, ax, ay + 14);
       });
 
-      // Draw flight trails
-      if (curTrails?.current) {
-        const project = (lat, lon) => {
-          const d = haversine(curLat, curLon, lat, lon);
-          const b = bearing(curLat, curLon, lat, lon);
-          const px = (d / curRad) * maxR;
-          return {
-            x: cx + px * Math.cos(degreesToRadians(b - 90)),
-            y: cy + px * Math.sin(degreesToRadians(b - 90)),
-            dist: d,
-          };
-        };
-        trailsRef.current.forEach((pts, key) => {
-          if (pts.length < 2) return;
-          const coords = pts.map(p => project(p.lat, p.lon));
-          const cutoff = coords.filter(c => c.dist <= curRad);
-          if (cutoff.length < 2) return;
 
-          // Determine color based on category
-          const f = curFlights.find(flight => flight.id === key || flight.icao24 === key || flight.callsign === key);
-          const category = f ? f.category : 'civil';
-          let rgb = '0,255,157'; // standard sea green
-          if (category === 'private') rgb = '0,229,255'; // neon cyan
-          else if (category === 'cargo') rgb = '255,136,0'; // orange
-          else if (category === 'military') rgb = '255,0,0'; // bright red
-
-          for (let i = 1; i < cutoff.length; i++) {
-            const t = i / cutoff.length;
-            ctx.beginPath();
-            ctx.moveTo(cutoff[i - 1].x, cutoff[i - 1].y);
-            ctx.lineTo(cutoff[i].x, cutoff[i].y);
-            ctx.strokeStyle = `rgba(${rgb},${(1 - t) * 0.85})`;
-            ctx.lineWidth = 2.5 - t * 1.5;
-            ctx.stroke();
-          }
-        });
-      }
 
       const getAircraftVisuals = (f) => {
         const desc = (f.desc || '').toLowerCase();

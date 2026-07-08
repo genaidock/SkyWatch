@@ -183,9 +183,27 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const { radius: currentRadius } = stateRef.current;
 
       ctx.clearRect(0, 0, s, s);
-      // Semi-transparent dark overlay so map tiles show through
-      ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
+      
+      // 1. Draw the "rest area" mask (darker) over the whole square
+      ctx.fillStyle = 'rgba(4, 13, 20, 0.75)';
       ctx.fillRect(0, 0, s, s);
+
+      // 2. Clear out the circle area
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // 3. Fill the circle area with a lighter overlay
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
+      ctx.fill();
+      ctx.restore();
 
       // Draw range rings
       [0.2, 0.4, 0.6, 0.8, 1].forEach((r, i) => {

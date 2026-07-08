@@ -321,7 +321,8 @@ export function FlightProvider({ children }) {
     const radius = override.radius ?? state.radius;
     try {
       setApiStatus('loading', 'Fetching flights...');
-      const flights = await fetchFlights(lat, lon, radius, state.enabledAPIs);
+      const displayRadius = radius * 1.5; // Fetch larger area to cover square map corners
+      const flights = await fetchFlights(lat, lon, displayRadius, state.enabledAPIs);
       await processFlightData(flights);
     } catch (e) {
       setApiStatus('error', 'Failed to fetch flights');
@@ -341,10 +342,11 @@ export function FlightProvider({ children }) {
       let reconnectTimer = null;
 
       const connect = () => {
+        const displayRadius = state.radius * 1.5;
         const params = new URLSearchParams({
           lat: state.userLat.toFixed(4),
           lon: state.userLon.toFixed(4),
-          radius: String(state.radius),
+          radius: String(displayRadius),
         });
         for (const [key, val] of Object.entries(state.enabledAPIs)) {
           params.set(key, String(!!val));

@@ -41,7 +41,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
             width: '100%',
             maxWidth: 'min(100%, 60vh)',
             aspectRatio: '1 / 1',
-            borderRadius: '50%',
+            borderRadius: '16px', // Rounded square for masked map
             overflow: 'hidden',
             background: '#040d14',
           }}

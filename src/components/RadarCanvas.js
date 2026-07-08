@@ -156,11 +156,10 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const dpr = window.devicePixelRatio || 1;
 
     const resize = () => {
-      // Use both width and height for rectangular containers
-      const w = canvas.offsetWidth || 300;
-      const h = canvas.offsetHeight || 300;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
+      // offsetWidth is reliable — it's the CSS-rendered width of the canvas element
+      const size = canvas.offsetWidth || 300;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
@@ -176,37 +175,17 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       lastFrameTimeRef.current = timestamp;
       const deltaSec = Math.max(deltaMs / 1000, 0.0001); // avoid division by zero
 
-      const w = canvas.offsetWidth || 300;
-      const h = canvas.offsetHeight || 300;
-      const s = Math.min(w, h); // Use minimum dimension for scale
-      const cx = w / 2;
-      const cy = h / 2;
+      const s = canvas.offsetWidth || 300;
+      const cx = s / 2;
+      const cy = s / 2;
       const maxR = s * 0.46;
 
       const { radius: currentRadius } = stateRef.current;
 
-      ctx.clearRect(0, 0, w, h);
-      
-      // 1. Draw the "rest area" mask (darker) over the whole square/rectangle
-      ctx.fillStyle = 'rgba(4, 13, 20, 0.75)';
-      ctx.fillRect(0, 0, w, h);
-
-      // 2. Clear out the circle area
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      
-      // 3. Fill the circle area with a lighter overlay
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
-      ctx.clip();
+      ctx.clearRect(0, 0, s, s);
+      // Semi-transparent dark overlay so map tiles show through
       ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
-      ctx.fill();
-      ctx.restore();
+      ctx.fillRect(0, 0, s, s);
 
       // Draw range rings
       [0.2, 0.4, 0.6, 0.8, 1].forEach((r, i) => {
@@ -238,17 +217,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.lineTo(x2, y2);
         ctx.stroke();
       });
-
-      // Draw compass letters
-      ctx.fillStyle = 'rgba(0, 200, 255, 0.4)';
-      ctx.font = `bold ${Math.max(s * 0.02, 10)}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const pOffset = s * 0.025;
-      ctx.fillText('N', cx, cy - maxR + pOffset);
-      ctx.fillText('S', cx, cy + maxR - pOffset);
-      ctx.fillText('E', cx + maxR - pOffset, cy);
-      ctx.fillText('W', cx - maxR + pOffset, cy);
 
       // Draw sweep — frame-rate independent rotation
       sweepRef.current = (sweepRef.current + SWEEP_DEG_PER_SEC * deltaSec) % 360;
@@ -375,7 +343,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const distKm = haversine(curLat, curLon, smoothed.lat, smoothed.lon);
         const brg = bearing(curLat, curLon, smoothed.lat, smoothed.lon);
         const px = (distKm / curRad) * maxR;
-        if (px > maxR) return; // Hide flights outside the circle
         const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
         const by = cy + px * Math.sin(degreesToRadians(brg - 90));
         const isSel = curSelFlight && curSelFlight.id === f.id;
@@ -527,12 +494,10 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
-    const w = canvas.offsetWidth || 300;
-    const h = canvas.offsetHeight || 300;
-    const s = Math.min(w, h);
-    const cx = w / 2;
-    const cy = h / 2;
-    const maxR = s * 0.46;
+    const size = canvas.offsetWidth || 300;
+    const cx = size / 2;
+    const cy = size / 2;
+    const maxR = size * 0.46;
 
     let closestFlight = null;
     let minDist = Infinity;
@@ -549,8 +514,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const distKm = haversine(cLat, cLon, lat, lon);
       const brg = bearing(cLat, cLon, lat, lon);
       const px = (distKm / cRad) * maxR;
-      if (px > maxR) return; // Ignore flights outside the radar circle
-      
       const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
       const by = cy + px * Math.sin(degreesToRadians(brg - 90));
       const dx = clickX - bx;

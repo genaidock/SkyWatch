@@ -1,7 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
+import Header from '@/components/Header';
+import LocationBar from '@/components/LocationBar';
+import ApiStatus from '@/components/ApiStatus';
 import RadarMapBackground from '@/components/RadarMapBackground';
 import RadarCanvas from '@/components/RadarCanvas';
 
@@ -25,81 +28,32 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
   const maxAlt = state.flights.length > 0 ? Math.max(...state.flights.map(f => f.altitude || 0)) : 0;
   const isDemo = state.flights.length > 0 && state.flights.every(f => f.isDemo);
 
-  const apiDotClass = {
-    live:    'bg-green shadow-[0_0_6px_#00ff9d]',
-    ok:      'bg-green shadow-[0_0_6px_#00ff9d]',
-    demo:    'bg-amber shadow-[0_0_6px_#ffb300]',
-    loading: 'bg-cyan shadow-[0_0_6px_#00c8ff]',
-    warning: 'bg-amber shadow-[0_0_6px_#ffb300]',
-    error:   'bg-red-500 shadow-[0_0_6px_#ff3b3b]',
-    err:     'bg-red-500 shadow-[0_0_6px_#ff3b3b]',
-  };
-  const dotCls = apiDotClass[state.apiStatus?.type] || apiDotClass.demo;
-  const statusLabel = isDemo ? 'DEMO' :
-    (state.apiStatus?.type === 'ok' || state.apiStatus?.type === 'live') ? 'LIVE' :
-    (state.apiStatus?.type || '').toUpperCase();
-
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-[#020a10]">
-
-      {/* ── Compact top strip ── */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-cyan/15 bg-gradient-to-b from-cyan/5 to-transparent flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="font-mono font-black text-sm text-cyan tracking-widest drop-shadow-[0_0_12px_rgba(0,200,255,0.5)]">
-            SKYWATCH
-          </span>
-          <div className="flex items-center gap-1 text-[10px] font-mono text-green border border-green/30 px-1.5 py-0.5 rounded-full bg-green/10">
-            <div className="w-1 h-1 rounded-full bg-green animate-pulse" />
-            <span>LIVE</span>
-          </div>
+      {/* ── Original Top Bars ── */}
+      <Header title="SKYWATCH" subtitle="See flights around us...!!!" liveIndicator />
+      <LocationBar location={state.locationLabel} onLocationClick={onLocationClick} onRecenter={recenterLocation} />
+      <ApiStatus status={state.apiStatus} />
+      {isDemo && (
+        <div className="mx-3 mt-1 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/40 rounded-lg text-yellow-400 text-xs font-mono text-center animate-pulse flex-shrink-0">
+          ⚠ DEMO MODE — No live data. Check API status above.
         </div>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[10px] font-mono text-cyan/70 truncate max-w-[130px]">
-            {state.locationLabel || 'Acquiring...'}
-          </span>
-          <button
-            onClick={onLocationClick}
-            className="text-[10px] font-mono text-cyan border border-cyan/20 px-1.5 py-0.5 rounded bg-cyan/10 hover:bg-cyan/20 transition-colors flex-shrink-0"
-          >
-            LOC
-          </button>
-          <button
-            onClick={recenterLocation}
-            className="text-[10px] font-mono text-cyan border border-cyan/20 px-1.5 py-0.5 rounded bg-cyan/10 hover:bg-cyan/20 transition-colors flex-shrink-0"
-          >
-            ↺
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* ── 3-column body ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden mt-1">
 
-        {/* LEFT PANEL */}
-        <div className="flex flex-col justify-center items-center gap-4 px-2 py-3 flex-shrink-0 w-[72px]">
+        {/* LEFT PANEL (Stats) */}
+        <div className="flex flex-col justify-center items-center gap-6 px-2 py-3 flex-shrink-0 w-[72px]">
           <div className="text-center">
             <div className="font-mono font-bold text-xl text-cyan drop-shadow-[0_0_8px_#00c8ff] leading-none">{state.flights.length}</div>
-            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">A/C</div>
+            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">AIRCRAFT</div>
           </div>
           <div className="w-8 h-px bg-cyan/10" />
           <div className="text-center">
             <div className="font-mono font-bold text-base text-cyan/80 drop-shadow-[0_0_6px_#00c8ff] leading-none">{state.radius}</div>
-            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">KM</div>
+            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">RADIUS</div>
           </div>
-          <div className="w-8 h-px bg-cyan/10" />
-          <div className="flex flex-col items-center gap-1">
-            <div className={'w-2 h-2 rounded-full ' + dotCls} />
-            <div className="text-[8px] font-mono text-cyan/30 tracking-wider text-center">{statusLabel}</div>
-          </div>
-          {isDemo && (
-            <>
-              <div className="w-8 h-px bg-cyan/10" />
-              <div className="text-center">
-                <div className="text-amber text-base animate-pulse">!</div>
-                <div className="text-[8px] font-mono text-amber/60 tracking-wider mt-0.5">DEMO</div>
-              </div>
-            </>
-          )}
         </div>
 
         {/* CENTER – RADAR */}
@@ -136,36 +90,34 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="flex flex-col justify-center items-center gap-4 px-2 py-3 flex-shrink-0 w-[72px]">
+        {/* RIGHT PANEL (Stats & Legend) */}
+        <div className="flex flex-col justify-center items-center gap-6 px-2 py-3 flex-shrink-0 w-[72px]">
           <div className="text-center">
             <div className="font-mono font-bold text-base text-cyan/80 drop-shadow-[0_0_6px_#00c8ff] leading-none">
               {maxAlt > 0 ? (maxAlt / 1000).toFixed(1) + 'k' : '-'}
             </div>
-            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">MAX FT</div>
+            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">MAX ALT</div>
           </div>
           <div className="w-8 h-px bg-cyan/10" />
           <div className="text-center">
             <div className="font-mono font-bold text-base text-cyan drop-shadow-[0_0_8px_#00c8ff] leading-none">{timeStr}</div>
-            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">TIME</div>
+            <div className="text-[9px] font-mono text-cyan/40 tracking-widest mt-1">UPDATED</div>
           </div>
           <div className="w-8 h-px bg-cyan/10" />
-          <div className="flex flex-col gap-2.5 items-center">
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-2 h-2 rounded-full bg-green shadow-[0_0_6px_rgba(0,255,157,0.7)]" />
-              <div className="text-[7.5px] font-mono text-cyan/30 tracking-wider">CIVIL</div>
+          
+          {/* Original Legend Restored */}
+          <div className="flex flex-col gap-3 items-center mt-2">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-green shadow-[0_0_8px_rgba(0,255,157,0.6)]" />
+              <div className="text-[8px] font-mono text-cyan/40 tracking-wider text-center leading-tight">CRUISING</div>
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-2 h-2 rounded-full shadow-[0_0_6px_rgba(255,136,0,0.7)]" style={{ background: '#ff8800' }} />
-              <div className="text-[7.5px] font-mono text-cyan/30 tracking-wider">CARGO</div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(255,59,59,0.6)]" />
+              <div className="text-[8px] font-mono text-cyan/40 tracking-wider text-center leading-tight">&lt; 3000FT</div>
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(255,0,0,0.7)]" />
-              <div className="text-[7.5px] font-mono text-cyan/30 tracking-wider">MIL</div>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-2 h-2 rounded-full shadow-[0_0_6px_rgba(0,229,255,0.7)]" style={{ background: '#00e5ff' }} />
-              <div className="text-[7.5px] font-mono text-cyan/30 tracking-wider">PRVT</div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber shadow-[0_0_8px_rgba(255,179,0,0.6)]" />
+              <div className="text-[8px] font-mono text-cyan/40 tracking-wider text-center leading-tight">GND/SEL</div>
             </div>
           </div>
         </div>
@@ -174,4 +126,3 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
     </div>
   );
 }
-

@@ -156,10 +156,11 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const dpr = window.devicePixelRatio || 1;
 
     const resize = () => {
-      // offsetWidth is reliable — it's the CSS-rendered width of the canvas element
-      const size = canvas.offsetWidth || 300;
-      canvas.width = size * dpr;
-      canvas.height = size * dpr;
+      // Use both width and height for rectangular containers
+      const w = canvas.offsetWidth || 300;
+      const h = canvas.offsetHeight || 300;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
@@ -175,18 +176,20 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       lastFrameTimeRef.current = timestamp;
       const deltaSec = Math.max(deltaMs / 1000, 0.0001); // avoid division by zero
 
-      const s = canvas.offsetWidth || 300;
-      const cx = s / 2;
-      const cy = s / 2;
+      const w = canvas.offsetWidth || 300;
+      const h = canvas.offsetHeight || 300;
+      const s = Math.min(w, h); // Use minimum dimension for scale
+      const cx = w / 2;
+      const cy = h / 2;
       const maxR = s * 0.46;
 
       const { radius: currentRadius } = stateRef.current;
 
-      ctx.clearRect(0, 0, s, s);
+      ctx.clearRect(0, 0, w, h);
       
-      // 1. Draw the "rest area" mask (darker) over the whole square
+      // 1. Draw the "rest area" mask (darker) over the whole square/rectangle
       ctx.fillStyle = 'rgba(4, 13, 20, 0.75)';
-      ctx.fillRect(0, 0, s, s);
+      ctx.fillRect(0, 0, w, h);
 
       // 2. Clear out the circle area
       ctx.save();

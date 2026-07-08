@@ -371,12 +371,11 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.closePath();
         ctx.fill();
 
-        // Draw tail lights for special categories
-        if (category === 'private' || category === 'cargo' || category === 'military') {
-          // Use neon cyan for private to improve contrast
-          const lightColor = category === 'private' ? '#00e5ff' : 
-                             category === 'cargo' ? '#ff8800' : 
-                             '#ff0000';
+        // Draw tail lights for all categories
+        const lightColor = category === 'private' ? '#00e5ff' : 
+                           category === 'cargo' ? '#ff8800' : 
+                           category === 'military' ? '#ff0000' :
+                           '#ffffff';
           
           // Flash effect based on time
           const flash = Math.sin(now / 150) > 0.5 ? 1 : 0.4;
@@ -391,7 +390,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
           ctx.shadowBlur = 18 * flash;
           ctx.fill();
           ctx.globalAlpha = 1.0; // reset
-        }
 
         ctx.restore();
 

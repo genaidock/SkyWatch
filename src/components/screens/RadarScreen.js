@@ -83,10 +83,30 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
 
         <div className="px-3 py-2">
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim mt-1 mb-5 justify-center bg-panel border border-cyan/15 rounded-xl py-2 px-3 mx-auto w-fit max-w-[95%]">
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green shadow-[0_0_8px_rgba(0,255,157,0.6)]"></div> <span className="pt-0.5">Cruising</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(255,59,59,0.6)]"></div> <span className="pt-0.5">&lt; 3000ft</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber shadow-[0_0_8px_rgba(255,179,0,0.6)]"></div> <span className="pt-0.5">Ground / Sel</span></div>
+          <div className="flex flex-col gap-2 w-fit max-w-[95%] mx-auto mt-1 mb-5">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-cyan/15 rounded-xl py-2 px-3">
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green shadow-[0_0_8px_rgba(0,255,157,0.6)]"></div> <span className="pt-0.5">Cruising</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(255,59,59,0.6)]"></div> <span className="pt-0.5">&lt; 3000ft</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber shadow-[0_0_8px_rgba(255,179,0,0.6)]"></div> <span className="pt-0.5">Ground / Sel</span></div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-cyan/15 rounded-xl py-1.5 px-3">
+              <div className="flex items-center gap-1.5">
+                 <div className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]"></div>
+                 <span className="pt-0.5 text-cyan/70">Private</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                 <div className="w-1.5 h-1.5 rounded-full bg-[#ff8800] shadow-[0_0_8px_#ff8800]"></div>
+                 <span className="pt-0.5 text-cyan/70">Cargo</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                 <div className="w-1.5 h-1.5 rounded-full bg-[#ff0000] shadow-[0_0_8px_#ff0000]"></div>
+                 <span className="pt-0.5 text-cyan/70">Military</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                 <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                 <span className="pt-0.5 text-cyan/70">Civil</span>
+              </div>
+            </div>
           </div>
           <div className="text-xs font-mono text-cyan tracking-widest">NEARBY AIRCRAFT</div>
         </div>

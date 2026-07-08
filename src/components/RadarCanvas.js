@@ -239,6 +239,17 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.stroke();
       });
 
+      // Draw compass letters
+      ctx.fillStyle = 'rgba(0, 200, 255, 0.4)';
+      ctx.font = `bold ${Math.max(s * 0.02, 10)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const pOffset = s * 0.025;
+      ctx.fillText('N', cx, cy - maxR + pOffset);
+      ctx.fillText('S', cx, cy + maxR - pOffset);
+      ctx.fillText('E', cx + maxR - pOffset, cy);
+      ctx.fillText('W', cx - maxR + pOffset, cy);
+
       // Draw sweep — frame-rate independent rotation
       sweepRef.current = (sweepRef.current + SWEEP_DEG_PER_SEC * deltaSec) % 360;
       const sw2 = degreesToRadians(sweepRef.current - 90);
@@ -364,6 +375,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const distKm = haversine(curLat, curLon, smoothed.lat, smoothed.lon);
         const brg = bearing(curLat, curLon, smoothed.lat, smoothed.lon);
         const px = (distKm / curRad) * maxR;
+        if (px > maxR) return; // Hide flights outside the circle
         const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
         const by = cy + px * Math.sin(degreesToRadians(brg - 90));
         const isSel = curSelFlight && curSelFlight.id === f.id;
@@ -515,10 +527,12 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
-    const size = canvas.offsetWidth || 300;
-    const cx = size / 2;
-    const cy = size / 2;
-    const maxR = size * 0.46;
+    const w = canvas.offsetWidth || 300;
+    const h = canvas.offsetHeight || 300;
+    const s = Math.min(w, h);
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = s * 0.46;
 
     let closestFlight = null;
     let minDist = Infinity;
@@ -535,6 +549,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const distKm = haversine(cLat, cLon, lat, lon);
       const brg = bearing(cLat, cLon, lat, lon);
       const px = (distKm / cRad) * maxR;
+      if (px > maxR) return; // Ignore flights outside the radar circle
+      
       const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
       const by = cy + px * Math.sin(degreesToRadians(brg - 90));
       const dx = clickX - bx;

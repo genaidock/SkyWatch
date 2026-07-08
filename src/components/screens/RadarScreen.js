@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
@@ -32,8 +32,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
     <div className="flex flex-col flex-1 overflow-hidden bg-[#020a10]">
       {/* ── Original Top Bars ── */}
       <Header title="SKYWATCH" subtitle="See flights around us...!!!" liveIndicator />
-      <LocationBar location={state.locationLabel} onLocationClick={onLocationClick} onRecenter={recenterLocation} />
-      <ApiStatus status={state.apiStatus} />
+      <LocationBar location={state.locationLabel} onLocationClick={onLocationClick} onRecenter={recenterLocation} apiStatus={state.apiStatus} />
       {isDemo && (
         <div className="mx-3 mt-1 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/40 rounded-lg text-yellow-400 text-xs font-mono text-center animate-pulse flex-shrink-0">
           ⚠ DEMO MODE — No live data. Check API status above.
@@ -79,12 +78,6 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
                   onSelectFlight={onSelectFlight}
                   trailsRef={trailsRef}
                 />
-                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 2 }}>
-                  <div className="absolute top-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">N</div>
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">S</div>
-                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/40">E</div>
-                  <div className="absolute left-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/40">W</div>
-                </div>
               </>
             )}
           </div>

@@ -48,8 +48,8 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
         >
           {state.userLat === null ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#040d14] z-50">
-              <div className="w-12 h-12 border-4 border-cyan/20 border-t-cyan rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,200,255,0.5)]"></div>
-              <div className="text-cyan font-mono text-sm tracking-widest animate-pulse">ACQUIRING GPS...</div>
+              <div className="w-12 h-12 border-4 border-[#00e5ff]/20 border-t-[#00e5ff] rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,229,255,0.5)]"></div>
+              <div className="text-[#00e5ff] font-mono text-sm tracking-widest animate-pulse">ACQUIRING GPS...</div>
             </div>
           ) : (
             <>
@@ -85,9 +85,9 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
           {/* Legend */}
           <div className="flex flex-col gap-2 w-fit max-w-[95%] mx-auto mt-1 mb-5">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-cyan/15 rounded-xl py-2 px-3">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green shadow-[0_0_8px_rgba(0,255,157,0.6)]"></div> <span className="pt-0.5">Cruising</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(255,59,59,0.6)]"></div> <span className="pt-0.5">&lt; 3000ft</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber shadow-[0_0_8px_rgba(255,179,0,0.6)]"></div> <span className="pt-0.5">Ground / Sel</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#00e5ff] shadow-[0_0_8px_rgba(0,229,255,0.6)]"></div> <span className="pt-0.5">Cruising</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ff003c] shadow-[0_0_8px_rgba(255,0,60,0.6)]"></div> <span className="pt-0.5">&lt; 3000ft</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ffaa00] shadow-[0_0_8px_rgba(255,170,0,0.6)]"></div> <span className="pt-0.5">Ground / Sel</span></div>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-cyan/15 rounded-xl py-1.5 px-3">
               <div className="flex items-center gap-1.5">

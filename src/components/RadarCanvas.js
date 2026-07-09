@@ -172,27 +172,27 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const { radius: currentRadius } = stateRef.current;
 
       ctx.clearRect(0, 0, s, s);
-      // Semi-transparent dark overlay so map tiles show through
-      ctx.fillStyle = 'rgba(4, 13, 20, 0.15)';
+      // Semi-transparent dark overlay so map tiles show through, but darker for Luminous Precision
+      ctx.fillStyle = 'rgba(2, 6, 10, 0.35)'; // Darker void
       ctx.fillRect(0, 0, s, s);
 
-      // Draw range rings
+      // Draw range rings - Hyper-cyan
       [0.2, 0.4, 0.6, 0.8, 1].forEach((r, i) => {
         ctx.beginPath();
         ctx.arc(cx, cy, maxR * r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,200,255,${0.05 + i * 0.012})`;
+        ctx.strokeStyle = `rgba(0, 229, 255, ${0.08 + i * 0.02})`;
         ctx.lineWidth = 1;
         ctx.stroke();
 
         const km = (currentRadius * r).toFixed(1).replace('.0', '');
-        ctx.fillStyle = 'rgba(0,200,255,0.16)';
-        ctx.font = `${s * 0.019}px Courier New`;
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+        ctx.font = `${s * 0.018}px Courier New`;
         ctx.textAlign = 'left';
         ctx.fillText(km + 'km', cx + maxR * r * 0.71 + 2, cy - maxR * r * 0.71 - 1);
       });
 
       // Draw crosshairs
-      ctx.strokeStyle = 'rgba(0,200,255,0.055)';
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
       ctx.lineWidth = 1;
       const lines = [
         [cx, cy - maxR, cx, cy + maxR],
@@ -216,22 +216,22 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
       for (let i = 0; i < 75; i++) {
         const a = degreesToRadians(-i);
-        const al = (1 - i / 75) * 0.075;
+        const al = (1 - i / 75) * 0.09;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, maxR, a, a - degreesToRadians(1), true);
-        ctx.fillStyle = `rgba(0,200,255,${al})`;
+        ctx.fillStyle = `rgba(0, 229, 255, ${al})`;
         ctx.fill();
       }
 
       const lg = ctx.createLinearGradient(0, 0, maxR, 0);
-      lg.addColorStop(0, 'rgba(0,200,255,0)');
-      lg.addColorStop(1, 'rgba(0,200,255,0.85)');
+      lg.addColorStop(0, 'rgba(0, 229, 255, 0)');
+      lg.addColorStop(1, 'rgba(0, 229, 255, 0.95)');
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(maxR, 0);
       ctx.strokeStyle = lg;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2.0;
       ctx.stroke();
       ctx.restore();
 
@@ -252,17 +252,17 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const ay = cy + px * Math.sin(degreesToRadians(b - 90));
 
         ctx.beginPath();
-        ctx.arc(ax, ay, 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(250, 204, 21, 0.8)'; // yellow-400 with opacity
+        ctx.arc(ax, ay, 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.3)';
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.1)';
+        ctx.lineWidth = 3;
         ctx.stroke();
 
-        ctx.font = 'bold 10px monospace';
-        ctx.fillStyle = 'rgba(250, 204, 21, 0.9)';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.35)';
         ctx.textAlign = 'center';
-        ctx.fillText(airport.code, ax, ay + 14);
+        ctx.fillText(airport.code, ax, ay + 12);
       });
 
 
@@ -299,7 +299,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
         const by = cy + px * Math.sin(degreesToRadians(brg - 90));
         const isSel = curSelFlight && curSelFlight.id === f.id;
-        const col = isSel ? '#ffb300' : f.altitude < 3000 ? '#ff3b3b' : f.onGround ? '#ffb300' : '#00ff9d';
+        const col = isSel ? '#ffaa00' : f.altitude < 3000 ? '#ff003c' : f.onGround ? '#ffaa00' : '#00e5ff';
         
         const { category, sizeMult } = getAircraftVisuals(f);
         const l = s * 0.008 * sizeMult;
@@ -393,32 +393,32 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
         ctx.restore();
 
-        ctx.font = `${s * 0.018}px Courier New`;
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = `${s * 0.016}px Courier New`;
+        ctx.fillStyle = `rgba(${isSel ? '255, 170, 0' : '0, 229, 255'}, 0.65)`;
         ctx.textAlign = 'center';
-        ctx.fillText(f.callsign, bx, by - 12);
+        ctx.fillText(f.callsign, bx, by - (12 + l));
       });
 
       // Draw user position
       ctx.beginPath();
-      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#00c8ff';
-      ctx.shadowColor = '#00c8ff';
-      ctx.shadowBlur = 18;
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 20;
       ctx.fill();
       ctx.shadowBlur = 0;
 
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 480);
       ctx.beginPath();
-      ctx.arc(cx, cy, 9 + pulse * 5, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(0,200,255,${0.32 - pulse * 0.22})`;
+      ctx.arc(cx, cy, 7 + pulse * 6, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 229, 255, ${0.4 - pulse * 0.3})`;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.font = `bold ${s * 0.019}px Courier New`;
-      ctx.fillStyle = 'rgba(0,200,255,0.48)';
+      ctx.font = `bold ${s * 0.016}px Courier New`;
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.45)';
       ctx.textAlign = 'center';
-      ctx.fillText('YOU', cx, cy - 14);
+      ctx.fillText('ORG', cx, cy - 14);
 
       animRefRef.current = requestAnimationFrame(drawRadar);
     };

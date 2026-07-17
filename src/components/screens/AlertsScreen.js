@@ -16,6 +16,7 @@ export default function AlertsScreen({ onSelectFlight, onShowToast }) {
       case 'emergency': return 'border-red-500 bg-red-500/10 text-red-400';
       case 'military': return 'border-green-500 bg-green-500/10 text-green-400';
       case 'private': return 'border-purple-500 bg-purple-500/10 text-purple-400';
+      case 'helicopter': return 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]';
       default: return 'border-cyan/15 bg-panel text-tmid';
     }
   };
@@ -25,6 +26,7 @@ export default function AlertsScreen({ onSelectFlight, onShowToast }) {
       case 'emergency': return '🚨';
       case 'military': return '🪖';
       case 'private': return '🥂';
+      case 'helicopter': return '🚁';
       default: return 'ℹ️';
     }
   };

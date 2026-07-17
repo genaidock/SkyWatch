@@ -176,23 +176,23 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       ctx.fillStyle = 'rgba(2, 6, 10, 0.35)'; // Darker void
       ctx.fillRect(0, 0, s, s);
 
-      // Draw range rings - Hyper-cyan
+      // Draw range rings - Neutral UI
       [0.2, 0.4, 0.6, 0.8, 1].forEach((r, i) => {
         ctx.beginPath();
         ctx.arc(cx, cy, maxR * r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0, 229, 255, ${0.08 + i * 0.02})`;
+        ctx.strokeStyle = `rgba(226, 232, 240, ${0.05 + i * 0.02})`;
         ctx.lineWidth = 1;
         ctx.stroke();
 
         const km = (currentRadius * r).toFixed(1).replace('.0', '');
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.15)';
         ctx.font = `${s * 0.018}px Courier New`;
         ctx.textAlign = 'left';
         ctx.fillText(km + 'km', cx + maxR * r * 0.71 + 2, cy - maxR * r * 0.71 - 1);
       });
 
       // Draw crosshairs
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.05)';
       ctx.lineWidth = 1;
       const lines = [
         [cx, cy - maxR, cx, cy + maxR],
@@ -220,13 +220,13 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, maxR, a, a - degreesToRadians(1), true);
-        ctx.fillStyle = `rgba(0, 229, 255, ${al})`;
+        ctx.fillStyle = `rgba(226, 232, 240, ${al})`;
         ctx.fill();
       }
 
       const lg = ctx.createLinearGradient(0, 0, maxR, 0);
-      lg.addColorStop(0, 'rgba(0, 229, 255, 0)');
-      lg.addColorStop(1, 'rgba(0, 229, 255, 0.95)');
+      lg.addColorStop(0, 'rgba(226, 232, 240, 0)');
+      lg.addColorStop(1, 'rgba(226, 232, 240, 0.35)');
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(maxR, 0);
@@ -253,14 +253,14 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
 
         ctx.beginPath();
         ctx.arc(ax, ay, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.2)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(0, 229, 255, 0.1)';
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.05)';
         ctx.lineWidth = 3;
         ctx.stroke();
 
         ctx.font = 'bold 9px monospace';
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.35)';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.25)';
         ctx.textAlign = 'center';
         ctx.fillText(airport.code, ax, ay + 12);
       });
@@ -274,17 +274,25 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const category = f.category || 'civil';
 
         let sizeMult = 1.0;
-        if (/^(A38|B74|B77|B78|A35|A34|A33|C5|C17|AN1)/.test(type) || desc.includes('heavy') || desc.includes('widebody')) {
+        let isHeli = category === 'helicopter' || desc.includes('helicopter') || desc.includes('rotorcraft') || /^(R44|R66|B06|B40|AW1|S76|S92|AS3|EC1|H12|H13|H14|H15|UH60|AH64|CH47)/.test(type);
+        let isWidebody = false;
+        let isLight = false;
+        
+        if (isHeli) {
+          sizeMult = 1.3;
+        } else if (/^(A38|B74|B77|B78|A35|A34|A33|C5|C17|AN1)/.test(type) || desc.includes('heavy') || desc.includes('widebody')) {
           sizeMult = 1.6;
-        } else if (/^(C17|P28|SR2|C15|C18|R44|B06|DA4|DA6|C20|PA2|PA3)/.test(type) || desc.includes('light') || desc.includes('small') || desc.includes('piper')) {
+          isWidebody = true;
+        } else if (/^(C17|P28|SR2|C15|C18|DA4|DA6|C20|PA2|PA3|C172)/.test(type) || desc.includes('light') || desc.includes('small') || desc.includes('piper') || desc.includes('cessna')) {
           sizeMult = 0.65;
+          isLight = true;
         } else if (category === 'military' && !/^(C17|C130|A400)/.test(type)) {
           sizeMult = 0.75; // Fast jets
         } else if (category === 'private') {
           sizeMult = 0.8;
         }
 
-        return { category, sizeMult };
+        return { category, sizeMult, isHeli, isWidebody, isLight };
       };
 
       // ── Draw aircraft (using interpolated positions) ───────────────────
@@ -299,9 +307,23 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const bx = cx + px * Math.cos(degreesToRadians(brg - 90));
         const by = cy + px * Math.sin(degreesToRadians(brg - 90));
         const isSel = curSelFlight && curSelFlight.id === f.id;
-        const col = isSel ? '#ffaa00' : f.altitude < 3000 ? '#ff003c' : f.onGround ? '#ffaa00' : '#00e5ff';
+        const { category, sizeMult, isHeli, isWidebody, isLight } = getAircraftVisuals(f);
         
-        const { category, sizeMult } = getAircraftVisuals(f);
+        let baseCol;
+        if (isSel) {
+          baseCol = 'rgba(255, 170, 0, ';
+        } else if (isHeli) {
+          baseCol = 'rgba(57, 255, 20, ';
+        } else if (f.onGround) {
+          baseCol = 'rgba(255, 170, 0, ';
+        } else if (f.altitude < 3000) {
+          baseCol = 'rgba(255, 0, 60, ';
+        } else {
+          baseCol = 'rgba(0, 229, 255, ';
+        }
+        
+        const col = isSel ? baseCol + '0.9)' : baseCol + '0.45)';
+        
         const l = s * 0.008 * sizeMult;
 
         ctx.save();
@@ -312,18 +334,87 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.fillStyle = col;
 
         ctx.beginPath();
-        if (category === 'military') {
-          // Sharp delta fighter shape
-          ctx.moveTo(0, -l * 2.5);
-          ctx.lineTo(l * 0.3, -l * 0.5);
-          ctx.lineTo(l * 1.5, l * 0.8);
-          ctx.lineTo(l * 0.4, l * 0.8);
-          ctx.lineTo(l * 0.2, l * 2.0);
-          ctx.lineTo(0, l * 1.5);
-          ctx.lineTo(-l * 0.2, l * 2.0);
-          ctx.lineTo(-l * 0.4, l * 0.8);
-          ctx.lineTo(-l * 1.5, l * 0.8);
-          ctx.lineTo(-l * 0.3, -l * 0.5);
+        if (isHeli) {
+          // Helicopter shape
+          // Main Body
+          ctx.ellipse(0, 0, l * 0.45, l * 1.1, 0, 0, Math.PI * 2);
+          // Tail Boom
+          ctx.rect(-l * 0.1, l * 1.0, l * 0.2, l * 1.4);
+          // Tail Rotor
+          ctx.rect(-l * 0.4, l * 2.2, l * 0.8, l * 0.2);
+          
+          // Render the main rotor disc lightly over the body
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, l * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = isSel ? 'rgba(57, 255, 20, 0.25)' : 'rgba(57, 255, 20, 0.1)';
+          ctx.fill();
+          
+          // Re-establish a beginPath so the light rendering doesn't get confused
+          ctx.beginPath();
+        } else if (isLight) {
+          // Straight-wing Cessna style
+          ctx.moveTo(0, -l * 1.5);
+          ctx.bezierCurveTo(l*0.15, -l*1.5, l*0.2, -l*1.0, l*0.2, -l*0.5); // nose
+          // Right wing (straight)
+          ctx.lineTo(l * 1.8, -l*0.3);
+          ctx.lineTo(l * 1.8, l*0.1);
+          ctx.lineTo(l * 0.2, l*0.1);
+          // Body
+          ctx.lineTo(l * 0.1, l * 1.6);
+          // Horizontal stabilizer (straight)
+          ctx.lineTo(l * 0.6, l * 1.6);
+          ctx.lineTo(l * 0.6, l * 1.9);
+          ctx.lineTo(0, l * 1.9);
+          // Left side
+          ctx.lineTo(-l * 0.6, l * 1.9);
+          ctx.lineTo(-l * 0.6, l * 1.6);
+          ctx.lineTo(-l * 0.1, l * 1.6);
+          // Left wing
+          ctx.lineTo(-l * 0.2, l * 0.1);
+          ctx.lineTo(-l * 1.8, l * 0.1);
+          ctx.lineTo(-l * 1.8, -l * 0.3);
+          ctx.lineTo(-l * 0.2, -l * 0.5);
+          ctx.bezierCurveTo(-l*0.2, -l*1.0, -l*0.15, -l*1.5, 0, -l*1.5);
+        } else if (isWidebody) {
+          // Jumbo swept-wing style (more pronounced wings / thicker body)
+          ctx.moveTo(0, -l * 2.0);
+          ctx.bezierCurveTo(l * 0.35, -l * 2.0, l * 0.45, -l * 1.4, l * 0.45, -l * 0.8);
+          ctx.lineTo(l * 0.45, -l * 0.3);
+          // Huge wings
+          ctx.lineTo(l * 2.8, l * 0.8);
+          ctx.lineTo(l * 2.8, l * 1.2);
+          ctx.lineTo(l * 0.45, l * 0.7);
+          ctx.lineTo(l * 0.3, l * 1.7);
+          // Huge tail
+          ctx.lineTo(l * 1.2, l * 2.1);
+          ctx.lineTo(l * 1.2, l * 2.4);
+          ctx.lineTo(0, l * 2.2);
+          ctx.lineTo(-l * 1.2, l * 2.4);
+          ctx.lineTo(-l * 1.2, l * 2.1);
+          ctx.lineTo(-l * 0.3, l * 1.7);
+          ctx.lineTo(-l * 0.45, l * 0.7);
+          ctx.lineTo(-l * 2.8, l * 1.2);
+          ctx.lineTo(-l * 2.8, l * 0.8);
+          ctx.lineTo(-l * 0.45, -l * 0.3);
+          ctx.lineTo(-l * 0.45, -l * 0.8);
+          ctx.bezierCurveTo(-l * 0.45, -l * 1.4, -l * 0.35, -l * 2.0, 0, -l * 2.0);
+        } else if (category === 'military') {
+          // Stealth Fighter (F-22 style) shape
+          ctx.moveTo(0, -l * 2.5); // nose
+          ctx.lineTo(l * 0.3, -l * 0.8); // cockpit
+          ctx.lineTo(l * 1.6, l * 0.6); // wing tip
+          ctx.lineTo(l * 0.5, l * 1.0); // wing back
+          ctx.lineTo(l * 0.8, l * 2.0); // tail tip
+          ctx.lineTo(l * 0.3, l * 1.8); // tail back
+          ctx.lineTo(0, l * 1.6); // engine center
+          ctx.lineTo(-l * 0.3, l * 1.8);
+          ctx.lineTo(-l * 0.8, l * 2.0);
+          ctx.lineTo(-l * 0.5, l * 1.0);
+          ctx.lineTo(-l * 1.6, l * 0.6);
+          ctx.lineTo(-l * 0.3, -l * 0.8);
         } else if (category === 'private') {
           // T-tail swept bizjet
           ctx.moveTo(0, -l * 2.0);
@@ -371,10 +462,12 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.closePath();
         ctx.fill();
 
-        // Draw tail lights for all categories
-        const lightColor = category === 'private' ? '#00e5ff' : 
-                           category === 'cargo' ? '#ff8800' : 
-                           category === 'military' ? '#ff0000' :
+        // Draw tail lights for all categories using Navigational Nocturne 4-pillars
+        const lightColor = isSel ? '#ffaa00' :
+                           isHeli ? '#39ff14' :
+                           category === 'private' ? '#8a2be2' : 
+                           category === 'cargo' ? '#00ff9d' : 
+                           category === 'military' ? '#cc0000' :
                            '#ffffff';
           
           // Flash effect based on time
@@ -394,7 +487,7 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.restore();
 
         ctx.font = `${s * 0.016}px Courier New`;
-        ctx.fillStyle = `rgba(${isSel ? '255, 170, 0' : '0, 229, 255'}, 0.65)`;
+        ctx.fillStyle = isSel ? 'rgba(255, 255, 255, 0.85)' : 'rgba(226, 232, 240, 0.45)';
         ctx.textAlign = 'center';
         ctx.fillText(f.callsign, bx, by - (12 + l));
       });
@@ -402,8 +495,8 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       // Draw user position
       ctx.beginPath();
       ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#00e5ff';
-      ctx.shadowColor = '#00e5ff';
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.shadowColor = 'rgba(226, 232, 240, 0.8)';
       ctx.shadowBlur = 20;
       ctx.fill();
       ctx.shadowBlur = 0;
@@ -411,12 +504,12 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 480);
       ctx.beginPath();
       ctx.arc(cx, cy, 7 + pulse * 6, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(0, 229, 255, ${0.4 - pulse * 0.3})`;
+      ctx.strokeStyle = `rgba(226, 232, 240, ${0.4 - pulse * 0.3})`;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       ctx.font = `bold ${s * 0.016}px Courier New`;
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.45)';
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.3)';
       ctx.textAlign = 'center';
       ctx.fillText('ORG', cx, cy - 14);
 

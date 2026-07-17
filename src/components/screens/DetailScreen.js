@@ -20,14 +20,48 @@ export default function DetailScreen({ onBack }) {
   const f = state.selectedFlight;
 
   const [acDetails, setAcDetails] = useState(null);
+  const [acPhoto, setAcPhoto] = useState(null);
 
   useEffect(() => {
     let active = true;
-    if (f?.icao24) {
+    if (f?.icao24 || f?.reg) {
       setAcDetails(null);
-      fetchAircraftDetails(f.icao24).then(data => {
-        if (active && data) setAcDetails(data);
-      });
+      setAcPhoto(null);
+      
+      if (f?.icao24) {
+        fetchAircraftDetails(f.icao24).then(data => {
+          if (active && data) setAcDetails(data);
+        });
+      }
+      
+      const fetchPhoto = async () => {
+        try {
+          if (f.icao24 && f.icao24 !== '—') {
+            const res = await fetch(`https://api.planespotters.net/pub/photos/hex/${f.icao24}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.photos && data.photos.length > 0) {
+                if (active) setAcPhoto(data.photos[0].thumbnail_large.src);
+                return;
+              }
+            }
+          }
+          if (f.reg && f.reg !== '—' && !f.reg.includes('Encoded')) {
+            const res = await fetch(`https://api.planespotters.net/pub/photos/reg/${f.reg}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.photos && data.photos.length > 0) {
+                if (active) setAcPhoto(data.photos[0].thumbnail_large.src);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Photo fetch failed', e);
+        }
+      };
+      
+      fetchPhoto();
     }
     return () => { active = false; };
   }, [f?.icao24]);
@@ -59,7 +93,21 @@ export default function DetailScreen({ onBack }) {
         <div className="w-2 h-2 rounded-full bg-green glow-animation"></div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+        {acPhoto && (
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-neutral/15 mb-2 bg-black relative h-[220px] sm:h-[280px] w-full">
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-40 blur-xl scale-110" 
+              style={{ backgroundImage: `url(${acPhoto})` }}
+            ></div>
+            <img 
+              src={acPhoto} 
+              alt="Aircraft" 
+              className="absolute inset-0 w-full h-full object-contain drop-shadow-2xl" 
+            />
+          </div>
+        )}
         <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
           <div className="relative flex items-center justify-center mb-4 mt-1 min-h-[40px]">
             <div className="absolute left-0 text-xs text-tdim uppercase tracking-widest">Route</div>

@@ -39,7 +39,7 @@ export default function LocationModal({ show, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4"></div>
-        <h2 className="text-center font-mono text-cyan text-lg tracking-wider mb-6">📍 SET LOCATION</h2>
+        <h2 className="text-center font-mono text-white text-lg tracking-wider mb-6">📍 SET LOCATION</h2>
 
         {/* Quick Select Airports */}
         <div className="mb-6">
@@ -56,7 +56,7 @@ export default function LocationModal({ show, onClose }) {
                   });
                 }
               }}
-              className="bg-green/10 border border-green text-green px-3 py-1.5 rounded-lg font-mono text-xs font-bold hover:bg-green/20 transition-colors"
+              className="bg-neutral/10 border border-neutral text-neutral px-3 py-1.5 rounded-lg font-mono text-xs font-bold hover:bg-neutral/20 transition-colors"
             >
               📍 USE GPS
             </button>
@@ -66,7 +66,7 @@ export default function LocationModal({ show, onClose }) {
               <button
                 key={a.code}
                 onClick={() => handlePickAirport(a.lat, a.lon, a.code, a.name)}
-                className="bg-panel border border-cyan/15 rounded-xl p-3 hover:border-cyan/30 transition-colors text-left"
+                className="bg-panel border border-neutral/15 rounded-xl p-3 hover:border-neutral/30 transition-colors text-left"
               >
                 <div className="font-mono text-white font-bold">{a.code}</div>
                 <div className="text-xs text-tdim">{a.name}</div>
@@ -76,7 +76,7 @@ export default function LocationModal({ show, onClose }) {
 
           <div className="space-y-2 relative">
             <select
-              className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-cyan outline-none"
+              className="w-full bg-surface border border-neutral/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-neutral outline-none"
               onChange={(e) => {
                 if (!e.target.value) return;
                 const [lat, lon, code, name] = e.target.value.split('|');
@@ -93,7 +93,7 @@ export default function LocationModal({ show, onClose }) {
             </select>
 
             <select
-              className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-cyan outline-none"
+              className="w-full bg-surface border border-neutral/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-neutral outline-none"
               onChange={(e) => {
                 if (!e.target.value) return;
                 const [lat, lon, code, name] = e.target.value.split('|');
@@ -121,7 +121,7 @@ export default function LocationModal({ show, onClose }) {
               step="0.0001"
               value={manLat}
               onChange={(e) => setManLat(e.target.value)}
-              className="flex-1 bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-cyan outline-none"
+              className="flex-1 bg-surface border border-neutral/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-neutral outline-none"
             />
             <input
               type="number"
@@ -129,11 +129,11 @@ export default function LocationModal({ show, onClose }) {
               step="0.0001"
               value={manLon}
               onChange={(e) => setManLon(e.target.value)}
-              className="flex-1 bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-cyan outline-none"
+              className="flex-1 bg-surface border border-neutral/15 rounded-lg px-3 py-2 text-text font-mono text-sm focus:border-neutral outline-none"
             />
             <button
               onClick={handlePickManual}
-              className="bg-cyan/20 border border-cyan text-cyan px-3 py-2 rounded-lg font-mono text-sm font-bold hover:bg-cyan/30 transition-colors"
+              className="bg-neutral/20 border border-neutral text-neutral px-3 py-2 rounded-lg font-mono text-sm font-bold hover:bg-neutral/30 transition-colors"
             >
               SET
             </button>

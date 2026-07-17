@@ -266,14 +266,16 @@ export function FlightProvider({ children }) {
         let label = '';
         const sq = String(f.squawk || '');
         
-        if (sq === '7700') { label = 'General Emergency'; }
-        else if (sq === '7600') { label = 'Radio Failure'; }
-        else if (sq === '7500') { label = 'Hijacking'; }
+        let alertCategory = category;
+        if (sq === '7700') { label = 'General Emergency'; alertCategory = 'emergency'; }
+        else if (sq === '7600') { label = 'Radio Failure'; alertCategory = 'emergency'; }
+        else if (sq === '7500') { label = 'Hijacking'; alertCategory = 'emergency'; }
+        else if (f.isHeli) { label = 'Helicopter'; alertCategory = 'helicopter'; }
         else if (category === 'military') { label = 'Military Aircraft'; }
         else if (category === 'private') { label = 'Private Jet / VIP'; }
         else if (category === 'cargo') { label = 'Cargo Freighter'; }
-        if (category) {
-          addAlert({ message: `[${label}] ${f.callsign} (${f.type}) detected ${Math.round(f.distKm)}km away.`, category, flightId: f.id });
+        if (label) {
+          addAlert({ message: `[${label}] ${f.callsign} (${f.type}) detected ${Math.round(f.distKm)}km away.`, category: alertCategory, flightId: f.id });
           alertedPlanes.current.set(f.id, now);
         }
       }
@@ -282,7 +284,13 @@ export function FlightProvider({ children }) {
 
   const processFlightData = useCallback(async (rawFlights) => {
       const enriched = await enrichRoutes(rawFlights);
-      const timestamped = enriched.map(f => ({ ...f, lastUpdated: Date.now() }));
+      const timestamped = enriched.map(f => {
+        const desc = (f.desc || '').toLowerCase();
+        const type = (f.type || '').toUpperCase();
+        const cat = f.category || 'civil';
+        const isHeli = cat === 'helicopter' || desc.includes('helicopter') || desc.includes('rotorcraft') || /^(R44|R66|B06|B40|AW1|S76|S92|AS3|EC1|H12|H13|H14|H15|UH60|AH64|CH47)/.test(type);
+        return { ...f, lastUpdated: Date.now(), isHeli };
+      });
       setFlights(timestamped);
       setApiStatus('ok', `Tracking ${enriched.length} flights`);
       runAlerts(timestamped);

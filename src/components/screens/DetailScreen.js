@@ -169,6 +169,7 @@ export default function DetailScreen({ onBack }) {
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }

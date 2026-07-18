@@ -125,10 +125,36 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     const headingT = smoothFactor(0.005, dt); // very smooth heading rotation
     entry.displayHeading = lerpAngle(entry.displayHeading, entry.targetHeading, headingT);
 
-    // --- Position smoothing (exponential decay lerp toward moving target) ---
-    const posT = smoothFactor(0.008, dt);
-    entry.displayLat += (entry.targetLat - entry.displayLat) * posT;
-    entry.displayLon += (entry.targetLon - entry.displayLon) * posT;
+    // --- Dead Reckoning (Always move forward) ---
+    if (entry.speed > 0) {
+      const distKm = (entry.speed / 3600) * dt; // km traveled this frame
+      const headingRad = degreesToRadians(entry.displayHeading);
+      const latRad = degreesToRadians(entry.displayLat);
+      const tgtLatRad = degreesToRadians(entry.targetLat);
+      const tgtHeadRad = degreesToRadians(entry.targetHeading);
+      
+      // Advance display position based on speed and heading
+      entry.displayLat += (distKm * Math.cos(headingRad)) / 111.32;
+      entry.displayLon += (distKm * Math.sin(headingRad)) / (111.32 * Math.cos(latRad));
+
+      // IMPORTANT: Also advance the target position! 
+      // If we don't, the elastic tether will pull the display position backwards against the dead reckoning,
+      // causing the plane to stop moving until the next API update.
+      entry.targetLat += (distKm * Math.cos(tgtHeadRad)) / 111.32;
+      entry.targetLon += (distKm * Math.sin(tgtHeadRad)) / (111.32 * Math.cos(tgtLatRad));
+    }
+
+    // --- Elastic Tether (Soft correction toward target API position) ---
+    const distToTarget = haversine(entry.displayLat, entry.displayLon, entry.targetLat, entry.targetLon);
+    if (distToTarget > 10) {
+      entry.displayLat = entry.targetLat;
+      entry.displayLon = entry.targetLon;
+    } else if (distToTarget > 0.01) {
+      // Gentle pull toward the actual target coordinates
+      const posT = smoothFactor(0.05, dt); 
+      entry.displayLat += (entry.targetLat - entry.displayLat) * posT;
+      entry.displayLon += (entry.targetLon - entry.displayLon) * posT;
+    }
 
     return {
       lat: entry.displayLat,
@@ -252,17 +278,17 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         const ay = cy + px * Math.sin(degreesToRadians(b - 90));
 
         ctx.beginPath();
-        ctx.arc(ax, ay, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.2)';
+        ctx.arc(ax, ay, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.8)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(226, 232, 240, 0.05)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.3)';
+        ctx.lineWidth = 4;
         ctx.stroke();
 
-        ctx.font = 'bold 9px monospace';
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.25)';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.9)';
         ctx.textAlign = 'center';
-        ctx.fillText(airport.code, ax, ay + 12);
+        ctx.fillText(airport.code, ax, ay + 14);
       });
 
 

@@ -471,3 +471,17 @@ export async function fetchAircraftDetails(icao24) {
     return null;
   }
 }
+
+export async function fetchAirlineDetails(icao) {
+  if (!icao) return null;
+  try {
+    const targetUrl = `https://api.adsbdb.com/v0/airline/${icao}`;
+    const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data.response) ? data.response[0] : null;
+  } catch (e) {
+    return null;
+  }
+}

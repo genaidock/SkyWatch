@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getRedis, rateLimit } from '@/lib/redis';
 
-const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+const CACHE_TTL_HIT = 12 * 60 * 60; // 12 hours for found routes (airlines reuse callsigns)
+const CACHE_TTL_MISS = 60 * 60; // 1 hour for missing routes to retry sooner
 const FETCH_TIMEOUT = 5000;
 const MAX_CALLSIGNS_PER_REQUEST = 20;
 const MAX_CALLSIGN_LENGTH = 10;
@@ -131,7 +132,8 @@ export async function POST(request) {
       const pipeline = redis.pipeline();
       fetchedRoutes.forEach(({ callsign, route }) => {
         results[callsign] = route;
-        pipeline.setex(`route:${callsign}`, CACHE_TTL, JSON.stringify(route));
+        const ttl = (route.dep || route.arr) ? CACHE_TTL_HIT : CACHE_TTL_MISS;
+        pipeline.setex(`route:${callsign}`, ttl, JSON.stringify(route));
       });
       await pipeline.exec();
     } else {

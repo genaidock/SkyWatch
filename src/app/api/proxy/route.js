@@ -81,6 +81,23 @@ export async function GET(request) {
     console.error('Key injection failed:', e.message);
   }
 
+  const redis = getRedis();
+  let cacheKey = null;
+  const isAdsbdbAircraftOrAirline = parsed.hostname === 'api.adsbdb.com' && 
+                                   (parsed.pathname.startsWith('/v0/aircraft/') || parsed.pathname.startsWith('/v0/airline/'));
+  
+  if (isAdsbdbAircraftOrAirline && redis) {
+    cacheKey = `proxy:adsbdb:${parsed.pathname}`;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return NextResponse.json(typeof cached === 'string' ? JSON.parse(cached) : cached);
+      }
+    } catch (e) {
+      console.error('Redis cache error:', e);
+    }
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
 
@@ -99,6 +116,15 @@ export async function GET(request) {
     }
 
     const data = await response.json();
+    
+    if (isAdsbdbAircraftOrAirline && redis && cacheKey) {
+      try {
+        await redis.setex(cacheKey, 24 * 60 * 60, JSON.stringify(data)); // Cache for 24 hours
+      } catch (e) {
+        console.error('Redis set error:', e);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     if (error.name === 'AbortError') {

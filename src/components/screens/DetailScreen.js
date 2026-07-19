@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useFlightContext } from '@/context/FlightContext';
 import { getAircraftInfo } from '@/lib/utils';
-import { fetchAircraftDetails } from '@/lib/flightApi';
+import { fetchAircraftDetails, fetchAirlineDetails } from '@/lib/flightApi';
 import airlineMappings from '@/lib/airlineMappings.json';
 
 function DetailItem({ label, value }) {
@@ -21,47 +21,60 @@ export default function DetailScreen({ onBack }) {
 
   const [acDetails, setAcDetails] = useState(null);
   const [acPhoto, setAcPhoto] = useState(null);
+  const [photoLoading, setPhotoLoading] = useState(true);
+  const [airlineInfo, setAirlineInfo] = useState(null);
 
   useEffect(() => {
     let active = true;
-    if (f?.icao24 || f?.reg) {
+    if (f?.icao24 || f?.reg || f?.airlineObj?.icao) {
       setAcDetails(null);
       setAcPhoto(null);
+      setPhotoLoading(true);
+      setAirlineInfo(null);
       
-      if (f?.icao24) {
-        fetchAircraftDetails(f.icao24).then(data => {
-          if (active && data) setAcDetails(data);
-        });
-      }
-      
-      const fetchPhoto = async () => {
-        try {
-          if (f.icao24 && f.icao24 !== '—') {
-            const res = await fetch(`https://api.planespotters.net/pub/photos/hex/${f.icao24}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.photos && data.photos.length > 0) {
-                if (active) setAcPhoto(data.photos[0].thumbnail_large.src);
-                return;
+      const loadData = async () => {
+        let detailsPromise = f?.icao24 ? fetchAircraftDetails(f.icao24) : Promise.resolve(null);
+        let airlinePromise = f?.airlineObj?.icao ? fetchAirlineDetails(f.airlineObj.icao) : Promise.resolve(null);
+        
+        let photoPromise = (async () => {
+          try {
+            if (f?.icao24 && f.icao24 !== '—') {
+              const res = await fetch(`https://api.planespotters.net/pub/photos/hex/${f.icao24}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data.photos && data.photos.length > 0) return data.photos[0].thumbnail_large.src;
               }
             }
-          }
-          if (f.reg && f.reg !== '—' && !f.reg.includes('Encoded')) {
-            const res = await fetch(`https://api.planespotters.net/pub/photos/reg/${f.reg}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.photos && data.photos.length > 0) {
-                if (active) setAcPhoto(data.photos[0].thumbnail_large.src);
-                return;
+            if (f?.reg && f.reg !== '—' && !f.reg.includes('Encoded')) {
+              const res = await fetch(`https://api.planespotters.net/pub/photos/reg/${f.reg}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data.photos && data.photos.length > 0) return data.photos[0].thumbnail_large.src;
               }
             }
+          } catch (e) {
+            console.warn('Photo fetch failed', e);
           }
-        } catch (e) {
-          console.warn('Photo fetch failed', e);
+          return null;
+        })();
+        
+        const [details, airlineData, photoUrl] = await Promise.all([detailsPromise, airlinePromise, photoPromise]);
+        
+        if (active) {
+          if (details) setAcDetails(details);
+          if (airlineData) setAirlineInfo(airlineData);
+          
+          if (photoUrl) {
+            setAcPhoto(photoUrl);
+          } else if (details?.url_photo) {
+            setAcPhoto(details.url_photo);
+          } else {
+            setPhotoLoading(false);
+          }
         }
       };
       
-      fetchPhoto();
+      loadData();
     }
     return () => { active = false; };
   }, [f?.icao24]);
@@ -74,7 +87,7 @@ export default function DetailScreen({ onBack }) {
   const displayMaker = acDetails?.manufacturer || (ac && ac.maker !== '—' ? ac.maker : null);
   const displayModel = acDetails?.type || (ac && ac.maker !== '—' ? ac.model : f.desc || f.type);
   const displayAircraft = displayMaker ? `${displayMaker} ${displayModel}` : displayModel || '—';
-  const displayOwner = acDetails?.registered_owner || (f.airlineObj ? f.airlineObj.name : '—');
+  const displayOwner = airlineInfo?.name || acDetails?.registered_owner || (f.airlineObj ? f.airlineObj.name : '—');
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg">
@@ -98,29 +111,45 @@ export default function DetailScreen({ onBack }) {
         {acPhoto && (
           <div className="rounded-2xl overflow-hidden shadow-lg border border-neutral/15 mb-2 bg-black relative h-[220px] sm:h-[280px] w-full">
             <div 
-              className="absolute inset-0 bg-cover bg-center opacity-40 blur-xl scale-110" 
+              className={`absolute inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-500 ${photoLoading ? 'opacity-0' : 'opacity-40'}`} 
               style={{ backgroundImage: `url(${acPhoto})` }}
             ></div>
             <img 
               src={acPhoto} 
               alt="Aircraft" 
-              className="absolute inset-0 w-full h-full object-contain drop-shadow-2xl" 
+              onLoad={() => setPhotoLoading(false)}
+              className={`absolute inset-0 w-full h-full object-contain drop-shadow-2xl transition-opacity duration-500 ${photoLoading ? 'opacity-0' : 'opacity-100'}`} 
             />
+            {photoLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-surface/50 animate-pulse">
+                <div className="w-8 h-8 border-2 border-cyan/30 border-t-cyan rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
         )}
         <div className="bg-panel border border-cyan/15 rounded-3xl p-4 space-y-3">
           <div className="relative flex items-center justify-center mb-4 mt-1 min-h-[40px]">
             <div className="absolute left-0 text-xs text-tdim uppercase tracking-widest">Route</div>
             {f.airlineObj && (
-              <div className="flex items-center gap-3 text-sm text-slate-900 font-bold font-mono bg-white px-4 py-2 rounded-xl shadow-md">
-                {(airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]) && (
-                  <img 
-                    src={`/airlines/assets/${airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]}/icon.svg`} 
-                    alt={f.airlineObj.name} 
-                    className="h-8 w-auto object-contain"
-                  />
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-3 text-sm text-slate-900 font-bold font-mono bg-white px-4 py-2 rounded-xl shadow-md">
+                  {(airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]) && (
+                    <img 
+                      src={`/airlines/assets/${airlineMappings[f.airlineObj.icao] || airlineMappings[f.airlineObj.iata]}/icon.svg`} 
+                      alt={f.airlineObj.name} 
+                      className="h-8 w-auto object-contain"
+                    />
+                  )}
+                  <span>{f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}</span>
+                </div>
+                {airlineInfo && (
+                  <div className="mt-2 px-3 py-1 bg-cyan/10 border border-cyan/20 rounded-full text-xs font-mono text-cyan flex items-center gap-2">
+                    {airlineInfo.country_iso && (
+                      <img src={`https://flagcdn.com/20x15/${airlineInfo.country_iso.toLowerCase()}.png`} alt={airlineInfo.country} className="rounded-sm" />
+                    )}
+                    <span>{airlineInfo.country || 'Unknown'} • ICAO: {airlineInfo.icao}</span>
+                  </div>
                 )}
-                <span>{f.airlineObj.name} {f.airlineObj.callsign ? `("${f.airlineObj.callsign}")` : ''}</span>
               </div>
             )}
           </div>

@@ -257,7 +257,7 @@ export function FlightProvider({ children }) {
   const runAlerts = useCallback((flights) => {
     const now = Date.now();
     const oneHour = 60 * 60 * 1000;
-    for (const [id, ts] of alertedPlanes.current.entries()) {
+    for (const [id, ts] of Array.from(alertedPlanes.current.entries())) {
       if (now - ts > oneHour) alertedPlanes.current.delete(id);
     }
     for (const f of flights) {

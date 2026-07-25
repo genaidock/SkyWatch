@@ -350,38 +350,6 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         
         const col = isSel ? baseCol + '0.9)' : baseCol + '0.45)';
         
-        // --- Draw Colored Trail ---
-        if (curTrails?.current) {
-          const pts = curTrails.current.get(f.id);
-          if (pts && pts.length > 1) {
-            const trailColor = isHeli ? 'rgba(57, 255, 20, 0.5)' :
-                               category === 'private' ? 'rgba(138, 43, 226, 0.5)' : 
-                               category === 'cargo' ? 'rgba(0, 255, 157, 0.5)' : 
-                               category === 'military' ? 'rgba(204, 0, 0, 0.5)' :
-                               'rgba(255, 255, 255, 0.25)'; // standard civil
-
-            ctx.beginPath();
-            ctx.strokeStyle = trailColor;
-            ctx.lineWidth = 1.5;
-            
-            for (let i = 0; i < pts.length; i++) {
-              const pt = pts[i];
-              const tDist = haversine(curLat, curLon, pt.lat, pt.lon);
-              const tBrg = bearing(curLat, curLon, pt.lat, pt.lon);
-              const tPx = (tDist / curRad) * maxR;
-              const tBx = cx + tPx * Math.cos(degreesToRadians(tBrg - 90));
-              const tBy = cy + tPx * Math.sin(degreesToRadians(tBrg - 90));
-              if (i === 0) {
-                ctx.moveTo(tBx, tBy);
-              } else {
-                ctx.lineTo(tBx, tBy);
-              }
-            }
-            // Connect to current smoothed position
-            ctx.lineTo(bx, by);
-            ctx.stroke();
-          }
-        }
         
         const l = s * 0.008 * sizeMult;
 
@@ -521,56 +489,26 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
         ctx.closePath();
         ctx.fill();
 
-        // Draw realistic aircraft lights (Navigational lights)
-        let wingX, wingY, tailY;
-        if (isHeli) {
-            wingX = l * 0.45; wingY = l * 0.5; tailY = l * 2.4;
-        } else if (isLight) {
-            wingX = l * 1.8; wingY = -l * 0.1; tailY = l * 1.9;
-        } else if (isWidebody) {
-            wingX = l * 2.8; wingY = l * 1.0; tailY = l * 2.4;
-        } else if (category === 'military') {
-            wingX = l * 1.6; wingY = l * 0.6; tailY = l * 2.0;
-        } else if (category === 'private') {
-            wingX = l * 1.8; wingY = l * 0.7; tailY = l * 2.1;
-        } else {
-            wingX = l * 2.2; wingY = l * 0.6; tailY = l * 2.1;
-        }
-
-        const lightRadius = Math.max(1, s * 0.0025); // Slightly smaller for realism, ensure it's at least 1px
-        // Use aircraft ID to desync the flashes between different planes
+        // Fuselage flashing beacon (colored by category)
+        const lightColor = isSel ? '#ffaa00' :
+                           isHeli ? '#39ff14' :
+                           category === 'private' ? '#8a2be2' : 
+                           category === 'cargo' ? '#00ff9d' : 
+                           category === 'military' ? '#cc0000' :
+                           '#ffffff';
+          
         const idNum = f.id ? f.id.charCodeAt(0) + f.id.charCodeAt(f.id.length - 1) : 0;
-        const strobeFlash = Math.sin((now + idNum * 200) / 100) > 0.8 ? 1 : 0;
-        const beaconFlash = Math.sin((now + idNum * 200) / 400) > 0.5 ? 1 : 0;
+        // Slower blink
+        const beaconFlash = Math.sin((now + idNum * 200) / 400) > 0.5 ? 1 : 0.2;
 
-        const drawLight = (x, y, color, alpha, blur) => {
-            if (alpha <= 0) return;
-            ctx.beginPath();
-            ctx.arc(x, y, lightRadius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.globalAlpha = alpha;
-            ctx.shadowColor = color;
-            ctx.shadowBlur = blur;
-            ctx.fill();
-        };
-
-        // Red on left (port)
-        drawLight(-wingX, wingY, '#ff0000', 0.8, 6);
-        // Green on right (starboard)
-        drawLight(wingX, wingY, '#00ff00', 0.8, 6);
-        // White on tail
-        drawLight(0, tailY, '#ffffff', 0.8, 6);
-        
-        // Anti-collision strobes (white) on wingtips
-        if (strobeFlash) {
-            drawLight(-wingX, wingY, '#ffffff', 1.0, 12);
-            drawLight(wingX, wingY, '#ffffff', 1.0, 12);
-        }
-        
-        // Beacon (red) on center/top fuselage
-        if (beaconFlash) {
-            drawLight(0, 0, '#ff0000', 1.0, 12);
-        }
+        const lightRadius = Math.max(1.5, s * 0.004);
+        ctx.beginPath();
+        ctx.arc(0, 0, lightRadius, 0, Math.PI * 2);
+        ctx.fillStyle = lightColor;
+        ctx.globalAlpha = beaconFlash;
+        ctx.shadowColor = lightColor;
+        ctx.shadowBlur = 12 * beaconFlash;
+        ctx.fill();
 
         ctx.globalAlpha = 1.0; // reset
 

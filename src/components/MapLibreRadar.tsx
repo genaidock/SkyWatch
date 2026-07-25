@@ -217,7 +217,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
   const onMapLoad = useCallback((e) => {
     const map = e.target;
     const promises = Object.entries(ICONS).map(([name, svgString]) => {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         const img = new Image(48, 48);
         img.onload = () => {
           if (!map.hasImage(name)) map.addImage(name, img);

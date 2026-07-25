@@ -3,7 +3,7 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import { fetchFlights, enrichRoutes } from '../lib/flightApi';
 
-const FlightContext = createContext();
+const FlightContext = createContext<any>(undefined);
 
 const initialState = {
   flights: [],

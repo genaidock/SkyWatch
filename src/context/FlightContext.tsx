@@ -397,7 +397,7 @@ export function FlightProvider({ children }) {
         };
 
         // Store reference for cleanup
-        window.__skywatch_sse = es;
+        (window as any).__skywatch_sse = es;
       };
 
       connect();
@@ -405,7 +405,7 @@ export function FlightProvider({ children }) {
       return () => {
         sseActive.current = false;
         if (reconnectTimer) clearTimeout(reconnectTimer);
-        if (window.__skywatch_sse) window.__skywatch_sse.close();
+        if ((window as any).__skywatch_sse) (window as any).__skywatch_sse.close();
       };
     }, [state.userLat, state.userLon, state.radius, processFlightData]);
 

@@ -204,7 +204,7 @@ export function parseOpenSky(data, userLat, userLon, radiusKm) {
 }
 
 // Main fetch function - call this from your component
-export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs = {}, apiKeys = {}) {
+export async function fetchFlights(userLat: number, userLon: number, radiusKm = 100, enabledAPIs: any = {}, apiKeys: any = {}) {
   if (!userLat || !userLon) return [];
 
   // Try the server-side cached endpoint first
@@ -284,7 +284,7 @@ export async function fetchFlights(userLat, userLon, radiusKm = 100, enabledAPIs
 
   const flights = sourceResults
     .filter(r => r.status === 'fulfilled')
-    .flatMap(r => r.value)
+    .flatMap(r => (r as any).value)
     .filter(Boolean);
 
   if (flights.length > 0) {
@@ -398,7 +398,7 @@ export async function enrichRoutes(flights) {
   const callsigns = Array.from(new Set(toFetch.map(f => f.callsign)));
   
   // Mark as attempted so we don't spam if it fails or rate limits
-  callsigns.forEach(cs => { ROUTE_FETCH_ATTEMPTS[cs] = now; });
+  callsigns.forEach((cs: any) => { ROUTE_FETCH_ATTEMPTS[cs] = now; });
   
   try {
     const res = await fetch('/api/routes', {

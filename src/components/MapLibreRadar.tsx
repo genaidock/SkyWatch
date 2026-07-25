@@ -33,10 +33,10 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
   const [blinkTick, setBlinkTick] = useState(true);
   
   // Refs for animation
-  const mapRef = useRef();
-  const rafRef = useRef();
+  const mapRef = useRef(null);
+  const rafRef = useRef(null);
   const lastTimeRef = useRef(Date.now());
-  const activeFlightsRef = useRef([]);
+  const activeFlightsRef = useRef<any[]>([]);
 
   // Blinker effect: Toggles every 500ms
   useEffect(() => {

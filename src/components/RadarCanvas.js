@@ -152,8 +152,18 @@ export default function RadarCanvas({ flights = [], selectedFlight = null, userL
     } else if (distToTarget > 0.01) {
       // Gentle pull toward the actual target coordinates
       const posT = smoothFactor(0.05, dt); 
-      entry.displayLat += (entry.targetLat - entry.displayLat) * posT;
-      entry.displayLon += (entry.targetLon - entry.displayLon) * posT;
+      
+      // Prevent backward rubberbanding
+      const correctionBearing = bearing(entry.displayLat, entry.displayLon, entry.targetLat, entry.targetLon);
+      let angleDiff = Math.abs(correctionBearing - entry.displayHeading);
+      if (angleDiff > 180) angleDiff = 360 - angleDiff;
+      
+      // If the target API position is behind our dead-reckoned position (due to lag),
+      // we barely pull backwards, acting as a soft brake rather than a harsh reverse rubberband.
+      const actualPosT = angleDiff > 90 ? posT * 0.02 : posT;
+      
+      entry.displayLat += (entry.targetLat - entry.displayLat) * actualPosT;
+      entry.displayLon += (entry.targetLon - entry.displayLon) * actualPosT;
     }
 
     return {

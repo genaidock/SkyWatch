@@ -323,7 +323,7 @@ export function FlightProvider({ children }) {
     }, [setFlights, setApiStatus, runAlerts]);
 
   // Polling fallback (used when SSE is unavailable)
-  const pollFlights = useCallback(async (override = {}) => {
+  const pollFlights = useCallback(async (override: any = {}) => {
     const lat = override.lat ?? state.userLat;
     const lon = override.lon ?? state.userLon;
     const radius = override.radius ?? state.radius;

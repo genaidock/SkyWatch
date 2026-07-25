@@ -191,3 +191,76 @@ Identify exploitable weaknesses:
 # Nikto web scanner
 nikto -h http://target.com
 ```
+
+### MITRE ATT&CK Framework Integration
+Document how professional pentesters use MITRE ATT&CK:
+- ATT&CK Matrix overview (Tactics → Techniques → Sub-techniques)
+- Key Tactics relevant to pentesting:
+  - TA0001 Initial Access
+  - TA0003 Persistence
+  - TA0004 Privilege Escalation
+  - TA0005 Defense Evasion
+  - TA0008 Lateral Movement
+  - TA0010 Exfiltration
+- How to reference ATT&CK IDs in professional reports (e.g., "T1078 - Valid Accounts")
+- ATT&CK Navigator for visualizing coverage
+- Threat-informed testing: simulating specific threat actor TTPs
+
+### Phase 5: Vulnerability Analysis (Expanded)
+Document the professional vulnerability analysis process:
+- OpenVAS/Greenbone for network vulnerability scanning
+- Metasploit Framework: db_nmap → vulns → search → use → info (reference workflow, not payload code)
+- Nikto web scanner command reference: `nikto -h <target> -o report.html -Format html`
+- searchsploit for CVE lookup: `searchsploit <service> <version>`
+- Manual verification importance: why automated scanners have false positives
+- Vulnerability prioritization matrix: CVSS score × exploitability × business impact
+- Chaining concept: combining multiple low-severity findings for higher impact
+
+### Phase 6: Professional Reporting
+Full reporting framework:
+- **Report Structure**:
+  1. Cover page (scope, dates, assessor, classification)
+  2. Executive Summary (2 pages max, business language)
+  3. Risk Rating Summary (table of all findings)
+  4. Detailed Findings (one page per vulnerability)
+  5. Remediation Roadmap (prioritized fix list)
+  6. Appendices (raw tool output, scope confirmation)
+- **Finding Template** (for each vulnerability):
+  - Finding ID, Title, Severity (CVSS)
+  - Affected Systems
+  - Description
+  - Evidence (screenshot/request-response)
+  - Business Impact
+  - Remediation Recommendation
+  - References (CVE, CWE, OWASP)
+- **CVSS v3.1 Quick Reference**: AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H = 9.8 Critical
+- **DREAD scoring** (alternative): Damage + Reproducibility + Exploitability + Affected Users + Discoverability
+
+### Phase 7: Legal & Ethics Framework
+- Pre-engagement checklist: authorization letter, scope document, NDA
+- Rules of Engagement template items: no DoS, no production data exfil, report critical findings immediately
+- Incident response during pentest: what to do if you find active breach
+- Evidence handling: chain of custody, encryption, retention policy
+- Regulatory context: GDPR implications, PCI DSS scope, HIPAA considerations
+
+### Tool Reference Table
+Create a comprehensive table:
+| Phase | Tool | Purpose | Key Command/Usage |
+|-------|------|---------|-------------------|
+| Recon | theHarvester | Email/domain recon | `theHarvester -d domain.com -b all` |
+| Recon | Shodan | Internet-exposed services | Web UI or `shodan host <IP>` |
+| Recon | Maltego | Relationship mapping | GUI tool |
+| Scanning | Nmap | Port/service discovery | `nmap -sV -sC -oA output target` |
+| Scanning | Masscan | Fast port scanning | `masscan -p1-65535 target --rate=1000` |
+| Web | Nikto | Web server scan | `nikto -h http://target` |
+| Web | WhatWeb | Technology fingerprinting | `whatweb target.com` |
+| Reporting | Dradis | Collaboration + reporting | Web UI |
+| Reporting | PlexTrac | Modern reporting platform | SaaS |
+
+### Continuous Learning Resources
+- PortSwigger Web Security Academy (free, hands-on labs)
+- Hack The Box (practical machine labs)
+- TryHackMe (guided learning paths)
+- Offensive Security PEN-200/OSCP certification path
+- PTES (pentest-standard.org) full methodology documentation
+- OWASP Testing Guide (WSTG) v4.2

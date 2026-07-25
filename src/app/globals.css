@@ -16,20 +16,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.02) 2px,
-    rgba(0, 0, 0, 0.02) 4px
-  );
-  pointer-events: none;
-  z-index: -1;
-}
+/* Removed background grid for cleaner look */
 
 /* Radar glow effects */
 @keyframes glow {

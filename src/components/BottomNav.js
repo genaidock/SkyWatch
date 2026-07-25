@@ -9,19 +9,19 @@ export default function BottomNav({ currentScreen, onScreenChange }) {
   ];
 
   return (
-    <div className="flex bg-black/70 border-t border-cyan/15 backdrop-blur-sm flex-shrink-0 z-50">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex bg-surface/90 backdrop-blur-md border border-neutral shadow-lg shadow-neutral/50 rounded-full px-2 py-1 z-50 w-[90%] max-w-sm">
       {screens.map(screen => (
         <button
           key={screen.id}
           onClick={() => onScreenChange(screen.id)}
-          className={`flex-1 flex flex-col items-center gap-1 py-2 cursor-pointer transition-all ${
+          className={`flex-1 flex flex-col items-center gap-1 py-2 px-3 mx-1 rounded-full cursor-pointer transition-all ${
             currentScreen === screen.id
-              ? 'text-cyan drop-shadow-[0_0_6px_#00c8ff]'
-              : 'text-tdim'
+              ? 'bg-cyan text-white shadow-sm'
+              : 'text-tdim hover:bg-neutral/50'
           }`}
         >
-          <div className="text-xl">{screen.icon}</div>
-          <div className="text-xs tracking-widest font-mono">{screen.label}</div>
+          <div className="text-lg">{screen.icon}</div>
+          <div className="text-[10px] tracking-widest font-display font-bold">{screen.label}</div>
         </button>
       ))}
     </div>

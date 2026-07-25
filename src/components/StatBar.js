@@ -17,24 +17,24 @@ export default function StatBar({ flights = 0, radius = 100, maxAlt = 0 }) {
   }, []);
 
   return (
-    <div className="grid grid-cols-4 gap-2 px-2.5 py-2 border-b border-neutral/10 bg-surface flex-shrink-0 text-xs">
-      <div className="text-center">
-        <div className="font-mono font-bold text-base text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{flights}</div>
-        <div className="text-tdim font-mono tracking-widest mt-0.5">Aircraft</div>
+    <div className="flex border-b border-neutral bg-surface flex-shrink-0 z-10">
+      <div className="flex-1 flex flex-col items-center justify-center py-4 px-2 border-r border-neutral">
+        <div className="text-sm font-bold font-display text-slate-900">{flights}</div>
+        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Aircraft</div>
       </div>
-      <div className="text-center">
-        <div className="font-mono font-bold text-base text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{radius} km</div>
-        <div className="text-tdim font-mono tracking-widest mt-0.5">Radius</div>
+      <div className="flex-1 flex flex-col items-center justify-center py-4 px-2 border-r border-neutral">
+        <div className="text-sm font-bold font-display text-slate-900">{radius} km</div>
+        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Radius</div>
       </div>
-      <div className="text-center">
-        <div className="font-mono font-bold text-base text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
+      <div className="flex-1 flex flex-col items-center justify-center py-4 px-2 border-r border-neutral">
+        <div className="text-sm font-bold font-display text-slate-900">
           {maxAlt > 0 ? `${(maxAlt / 1000).toFixed(1)}k` : '—'}
         </div>
-        <div className="text-tdim font-mono tracking-widest mt-0.5">Max Alt</div>
+        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Max Alt</div>
       </div>
-      <div className="text-center">
-        <div className="font-mono font-bold text-base text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{timeStr}</div>
-        <div className="text-tdim font-mono tracking-widest mt-0.5">Updated</div>
+      <div className="flex-1 flex flex-col items-center justify-center py-4 px-2">
+        <div className="text-sm font-bold font-display text-slate-900">{timeStr}</div>
+        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Updated</div>
       </div>
     </div>
   );

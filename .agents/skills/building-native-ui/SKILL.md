@@ -113,3 +113,48 @@ See `./references/route-structure.md` for detailed route conventions.
 - Use expo-haptics conditionally on iOS to make more delightful experiences
 - Use views with built-in haptics like `<Switch />` from React Native and `@react-native-community/datetimepicker`
 - When a route belongs to a Stack, its first child should almost always be a ScrollView with `contentInsetAdjustmentBehavior="automatic"` 
+
+## New Architecture (Stable in SDK 53)
+- **Fabric renderer benefits**: Experience concurrent React features, smooth UI thread rendering without the asynchronous bridge, and better support for React Suspense.
+- **TurboModules vs bridge modules**: TurboModules load lazily and execute synchronously, dramatically reducing app startup time compared to legacy native modules.
+- **JSI (JavaScript Interface)**: Understand that JSI allows JavaScript to hold direct references to C++ objects, enabling blazingly fast communication between JS and Native.
+- **Migration guide from old architecture**: Most Expo modules are already migrated. Ensure any third-party dependencies are compatible with the New Architecture.
+- **Debugging with Hermes inspector**: Use the modern React Native DevTools to debug Hermes and inspect the native UI tree accurately.
+
+## expo-router v4 Features
+- **Typed routes**: Use TypeScript to strongly type your route paths and parameters, preventing broken links at compile time.
+- **Async layout loading**: Defer the rendering of expensive layouts until they are needed using lazy imports and Suspense.
+- **Nested layouts best practices**: Keep layouts focused. Avoid prop drilling by leveraging context or global state alongside layout wrappers.
+- **API routes (server-side rendering)**: Build full-stack apps directly within Expo using API routes (`app/api/hello+api.ts`) for server logic.
+- **Route middleware**: Intercept and redirect routes based on authentication or feature flags before the layout renders.
+- **Authentication flow patterns**: Use group routes (e.g., `(auth)` and `(tabs)`) and a root layout observer to conditionally render stacks based on the user's session state.
+
+## State Management for Native
+- **Zustand for cross-component state**: Prefer Zustand for its minimal boilerplate and excellent React Native compatibility.
+- **React Query (TanStack Query) for server state**: Use React Query for caching, synchronizing, and background-updating remote data.
+- **Jotai for atomic state**: Excellent for complex UIs where derived state and fine-grained re-renders are crucial.
+- **AsyncStorage patterns with zustand-persist**: Persist user preferences or session tokens seamlessly using Zustand's persist middleware backed by AsyncStorage or SecureStore.
+
+## Performance Optimization
+- **React Native performance profiling**: Master Flipper (or modern Expo DevTools) and the React DevTools Profiler to identify render bottlenecks.
+- **FlatList optimization**: Always implement `getItemLayout` for fixed-height items, and tune `windowSize`, `maxToRenderPerBatch`, and `initialNumToRender` to prevent blank spaces during rapid scrolling.
+- **Image optimization**: Exclusively use `expo-image` for its aggressive disk and memory caching, placeholder support, and performant blurhashes.
+- **Reanimated 3 worklet patterns**: Offload all continuous animations and gesture handling to the UI thread using `useAnimatedStyle` and worklets to prevent JS thread drops.
+- **Avoid re-renders**: In React 19 / SDK 53, the React Compiler handles much of this, but continue to design clean component hierarchies to prevent unnecessary prop cascades.
+
+## Testing
+- **Jest + Testing Library for React Native**: Standardize on `@testing-library/react-native` for behavior-driven component tests.
+- **Maestro for E2E testing**: Use Maestro for reliable, easy-to-write E2E flows on both iOS and Android simulators (preferred over Detox for Expo apps).
+- **Unit testing hooks with renderHook**: Isolate and test complex custom hooks reliably without mounting dummy components.
+
+## Production Deployment
+- **EAS Build configuration**: Optimize `eas.json` with remote caching and appropriate build profiles (development, preview, production).
+- **OTA updates with EAS Update**: Deploy bug fixes and JS updates instantly to users without waiting for App Store review.
+- **App Store / Play Store review tips**: Provide test credentials, explain permission usages (like camera or location) clearly in the review notes, and avoid mentioning beta statuses in screenshots.
+- **Crash reporting**: Integrate Sentry (`@sentry/react-native`) for comprehensive native and JS crash tracking.
+- **Analytics**: Use `expo-tracking-transparency` on iOS to legally and safely request tracking permissions before initializing analytics SDKs.
+
+## iOS 26 Liquid Glass Effect
+- **expo-glass-effect usage**: Leverage `expo-glass-effect` for stunning, OS-level blurred translucent backgrounds (Apple's Liquid Glass style).
+- **Platform-specific design considerations**: Use `Platform.select` or `process.env.EXPO_OS` to provide fallback styling for Android where native liquid glass is unavailable.
+- **SwiftUI interop patterns**: When necessary, build custom SwiftUI views and expose them via Expo Modules to match native Apple design language perfectly.

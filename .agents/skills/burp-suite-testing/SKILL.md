@@ -140,3 +140,55 @@ Remove noise from HTTP history:
 #### Scope Benefits
 - Reduces clutter from third-party requests
 - Prevents accidental testing of out-of-scope sites
+
+### Phase 4: Burp Suite Extensions (BApp Store)
+Document these key professional extensions:
+- **Logger++** — Advanced logging with grep patterns for finding sensitive data in responses
+- **Turbo Intruder** — High-speed fuzzing for rate limit bypass testing
+- **Autorize** — Automated authorization testing (IDOR/BOLA detection)
+- **Active Scan++** — Enhanced scanner with additional checks
+- **JWT Editor** — JWT token inspection and manipulation for testing JWT vulnerabilities
+- **InQL** — GraphQL security testing scanner
+- **Param Miner** — Discover hidden parameters
+
+### Phase 5: API Security Testing Workflow
+Document the professional workflow for:
+- Importing OpenAPI/Swagger specs into Burp (Proxy → Options → OpenAPI parser)
+- Testing REST endpoints systematically (one by one from Site Map)
+- GraphQL introspection testing (GET /graphql?query={__schema{types{name}}})
+- WebSocket connection testing (Proxy → WebSockets history)
+- JWT inspection workflow (decode, verify signature, test alg:none)
+- OAuth 2.0 flow analysis (authorization code, implicit flow testing)
+
+### Phase 6: OWASP 2025 Testing Reference
+Create a table mapping each OWASP 2025 category to Burp Suite testing approach:
+| OWASP Category | Burp Tool/Feature | What to Test |
+|---|---|---|
+| A01 Broken Access Control | Repeater + Autorize | IDOR, privilege escalation |
+| A02 Security Misconfiguration | Scanner + manual | Headers, CORS, info disclosure |
+| A03 Supply Chain | Site Map | Third-party JS, CDN resources |
+| A04 Injection | Intruder + Scanner | SQL, XSS, XXE, SSTI payloads |
+| A05 Security Design Flaws | Manual | Logic flaws, workflow bypass |
+| A06 Vulnerable Components | Site Map + Scanner | Outdated libraries, CVE matching |
+| A07 Auth Failures | Repeater | Session fixation, weak tokens |
+| A08 Data Integrity | Repeater | Serialization, update integrity |
+| A09 Logging Failures | Manual | Error verbosity, log injection |
+| A10 Exceptional Conditions | Intruder | Error handling, edge cases |
+
+### Phase 7: Professional Reporting Standards
+- Report structure: Executive Summary, Scope, Methodology, Findings, Remediation
+- CVSS v3.1 scoring guide (Base Score components)
+- Finding severity levels: Critical (9-10), High (7-8.9), Medium (4-6.9), Low (0.1-3.9)
+- Evidence collection: screenshots, HTTP request/response pairs, reproduction steps
+- Remediation recommendations format: Short-term (patch), Long-term (architecture)
+- PortSwigger Web Security Academy as ongoing learning resource
+
+### Professional Checklist (Pre-Engagement)
+- [ ] Written authorization signed by system owner
+- [ ] Scope document with IP ranges and domains in-scope/out-of-scope
+- [ ] Emergency contact and safe harbor clause
+- [ ] Burp Suite project file created with client name
+- [ ] Scope configured in Target → Scope
+- [ ] Out-of-scope filtering enabled
+- [ ] Collaborative sessions configured (if team engagement)
+- [ ] Report template prepared

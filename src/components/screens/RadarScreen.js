@@ -6,8 +6,7 @@ import Header from '@/components/Header';
 import StatBar from '@/components/StatBar';
 import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
-import RadarMapBackground from '@/components/RadarMapBackground';
-import RadarCanvas from '@/components/RadarCanvas';
+import MapLibreRadar from '@/components/MapLibreRadar';
 import FlightCards from '@/components/FlightCards';
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
@@ -36,47 +35,23 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
 
         {/* ─── Radar + Map container ─── */}
         <div
-          className="radar-map-container relative mx-auto flex-shrink-0 touch-none select-none"
-          style={{
-            width: '100%',
-            maxWidth: 'min(100%, 60vh)',
-            aspectRatio: '1 / 1',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            background: '#040d14',
-          }}
+          className="radar-map-container relative w-full h-[55vh] min-h-[400px] flex-shrink-0 touch-none select-none overflow-hidden bg-neutral/20 border-b border-cyan/20 shadow-sm"
         >
           {state.userLat === null ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#040d14] z-50">
-              <div className="w-12 h-12 border-4 border-[#00e5ff]/20 border-t-[#00e5ff] rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,229,255,0.5)]"></div>
-              <div className="text-[#00e5ff] font-mono text-sm tracking-widest animate-pulse">ACQUIRING GPS...</div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-sm z-50">
+              <div className="w-12 h-12 border-4 border-cyan/20 border-t-cyan rounded-full animate-spin mb-4 shadow-lg shadow-cyan/20"></div>
+              <div className="text-cyan font-mono text-sm tracking-widest animate-pulse">ACQUIRING GPS...</div>
             </div>
           ) : (
             <>
-              {/* Layer 0 – Map tiles (always render to avoid hydration mismatch) */}
-              <RadarMapBackground
+              <MapLibreRadar
+                flights={state.flights}
+                selectedFlight={state.selectedFlight}
                 userLat={state.userLat}
                 userLon={state.userLon}
                 radius={state.radius}
+                onSelectFlight={onSelectFlight}
               />
-
-          {/* Layer 1 – Radar canvas (transparent bg, draws on top of map) */}
-          <RadarCanvas
-            flights={state.flights}
-            selectedFlight={state.selectedFlight}
-            userLat={state.userLat}
-            userLon={state.userLon}
-            radius={state.radius}
-            onSelectFlight={onSelectFlight}
-            trailsRef={trailsRef}
-          />
-
-          {/* Layer 2 – Compass labels */}
-          <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 2 }}>
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">N</div>
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-xs text-cyan/40">S</div>
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-xs text-cyan/40">E</div>
-          </div>
             </>
           )}
         </div>
@@ -84,35 +59,35 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
         <div className="px-3 py-2">
           {/* Legend */}
           <div className="flex flex-col gap-2 w-fit max-w-[95%] mx-auto mt-1 mb-5">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-neutral/15 rounded-xl py-2 px-3">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#00e5ff] shadow-[0_0_8px_rgba(0,229,255,0.6)]"></div> <span className="pt-0.5">Cruising</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ff003c] shadow-[0_0_8px_rgba(255,0,60,0.6)]"></div> <span className="pt-0.5">&lt; 3000ft</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ffaa00] shadow-[0_0_8px_rgba(255,170,0,0.6)]"></div> <span className="pt-0.5">Ground / Sel</span></div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tmid justify-center bg-surface border border-neutral rounded-xl py-2 px-3 shadow-sm">
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#00e5ff] shadow-sm"></div> <span>Cruising</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#ff003c] shadow-sm"></div> <span>&lt; 3000ft</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#ffaa00] shadow-sm"></div> <span>Ground / Sel</span></div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tdim justify-center bg-panel border border-neutral/15 rounded-xl py-2 px-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] font-mono text-tmid justify-center bg-surface border border-neutral rounded-xl py-2 px-3 shadow-sm">
               <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-[#ffffff] shadow-[0_0_8px_#ffffff]"></div>
-                 <span className="pt-0.5 text-neutral">Civil</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-civil"></div>
+                 <span className="text-text">Civil</span>
               </div>
               <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-[#00ff9d] shadow-[0_0_8px_#00ff9d]"></div>
-                 <span className="pt-0.5 text-neutral">Cargo</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-cargo"></div>
+                 <span className="text-text">Cargo</span>
               </div>
               <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-[#8a2be2] shadow-[0_0_8px_#8a2be2]"></div>
-                 <span className="pt-0.5 text-neutral">Private</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-private"></div>
+                 <span className="text-text">Private</span>
               </div>
               <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-[#cc0000] shadow-[0_0_8px_#cc0000]"></div>
-                 <span className="pt-0.5 text-neutral">Military</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-military"></div>
+                 <span className="text-text">Military</span>
               </div>
               <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-[#39ff14] shadow-[0_0_8px_#39ff14]"></div>
-                 <span className="pt-0.5 text-neutral">Heli</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-[#39ff14]"></div>
+                 <span className="text-text">Heli</span>
               </div>
             </div>
           </div>
-          <div className="text-xs font-mono text-neutral tracking-widest">NEARBY AIRCRAFT</div>
+          <div className="text-xs font-mono text-text font-bold tracking-widest">NEARBY AIRCRAFT</div>
         </div>
         <FlightCards flights={state.flights} selectedFlight={state.selectedFlight} onSelectFlight={onSelectFlight} />
       </div>

@@ -118,3 +118,50 @@ Assembles frames and optimizes for Slack:
 builder = GIFBuilder(width=128, height=128, fps=10)
 builder.add_frame(frame)  # Add PIL Image
 builder.add_frames(frames)  # Add list of fr
+
+## Advanced Animation Techniques
+- **Easing functions**: Implement non-linear interpolation (ease-in, ease-out, ease-in-out) in Python to make motion feel natural.
+- **Tweening**: Use linear interpolation (`start + (end - start) * progress`) for smooth motion across frames.
+- **Bounce and spring physics formulas**: Add overshoot and settle mechanics for dynamic, energetic animations.
+- **Keyframe animation system**: Define keyframes at specific percentages and interpolate values between them.
+
+## Anti-aliasing & Quality
+- **Supersampling technique**: Render your frame at 2x or 4x the target resolution, then downscale using `Image.Resampling.LANCZOS` for buttery smooth edges.
+- **PIL ImageFilter.SMOOTH**: Apply a light blur or smoothing filter to reduce jagged pixels before quantization.
+- **Sub-pixel rendering for circles**: When drawing small circular elements, use supersampling to avoid pixelated edges.
+
+## Effects Library
+- **Glow effect**: Duplicate a shape, enlarge it, fill with the glow color, apply a Gaussian blur (`ImageFilter.GaussianBlur`), and composite it behind the main shape.
+- **Shadow effect**: Draw a darker, offset version of the shape, blur it, and place it beneath the subject.
+- **Gradient fills on shapes**: Use masks and interpolated color arrays to fill shapes with smooth gradients.
+- **Pulsing/breathing animation**: Animate the scale and opacity of a shape over a sine wave loop.
+- **Spin/rotate animation**: Use PIL's `Image.rotate()` with varying angles across frames.
+- **Wave animation**: Apply a vertical sine offset to pixels or shapes to simulate water or flags.
+- **Particle system**: Manage an array of particle objects (x, y, velocity, lifetime) and draw them each frame.
+- **Text animations**: Create typewriter effects (revealing one character per frame) or fade-ins using text masks.
+
+## Color Palettes for GIFs
+- **Predefined Slack-friendly palettes**: Use bright, high-contrast colors (e.g., Slack's own aubergine, blue, green, yellow, red) that pop on both light and dark backgrounds.
+- **Brand color GIFs guide**: Limit brand palettes to 32-64 colors to fit within the 128KB limit without aggressive dithering.
+- **Dark vs light background considerations**: Design with transparency. Add a subtle contrasting stroke (e.g., white outline on dark shapes) so the GIF is visible in both Slack dark and light modes.
+
+## Optimization Guide
+- **Quantize properly**: Use `Image.quantize(colors=64, method=Image.Quantize.MEDIANCUT)` or neural net quantization to reduce palette size dramatically while maintaining visual fidelity.
+- **Dithering options**: Turn off dithering if it introduces too much noise; smooth gradients in GIFs often compress better as flat color bands.
+- **Frame deduplication**: If a section of the GIF is static, keep the frame count low or use transparency in subsequent frames to only update changing pixels (using the `gifsicle` approach).
+- **Loop count settings**: Set `loop=0` for infinite loops, which is standard for Slack emojis.
+- **Disposal methods**: Understand GIF disposal methods (e.g., Restore to Background vs Do Not Dispose) to optimize transparent animations.
+
+## Common GIF Patterns
+- **Loading spinner**: Smooth rotating arcs or pulsing dots.
+- **Success checkmark**: Animate the drawing of a checkmark path with a slight bounce at the end.
+- **Fire/flame effect**: Layered, undulating orange and yellow polygons.
+- **Confetti burst**: Particles exploding outward from the center and falling with gravity.
+- **Thumbs up animation**: A hand icon that scales up, rotates slightly, and scales back to 100%.
+- **Heart beat**: A heart shape that rapidly scales up to 120% and back twice per second.
+- **Wave/celebration**: An object moving left to right with a sine wave vertical offset.
+
+## Testing & Preview
+- **Preview in Python**: Use `frame.show()` or compile a quick unoptimized GIF for local playback.
+- **Browser preview via HTTP server**: Serve the generated GIF locally using `python -m http.server` to view it looping natively in a browser.
+- **Slack upload workflow**: Ensure the final file is strictly under 128KB before attempting to upload to Slack. Use a CLI tool like `gifsicle` as a post-processing step if PIL's compression is insufficient.

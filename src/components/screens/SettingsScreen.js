@@ -54,8 +54,8 @@ export default function SettingsScreen({ onShowToast }) {
         {/* Location Section */}
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">📍 LOCATION</div>
-          <button className="w-full bg-panel border border-cyan/15 rounded-xl p-3 hover:border-cyan/30 transition-colors text-left">
-            <div className="text-sm text-text">Set Location</div>
+          <button className="w-full bg-surface border border-neutral rounded-xl p-3 hover:bg-neutral/50 transition-colors text-left shadow-sm">
+            <div className="text-sm text-text font-bold">Set Location</div>
             <div className="text-xs text-tdim mt-1">{state.locationLabel}</div>
           </button>
         </div>
@@ -64,14 +64,14 @@ export default function SettingsScreen({ onShowToast }) {
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛰 RADAR</div>
           <div className="space-y-2">
-            <div className="bg-panel border border-cyan/15 rounded-xl p-3">
-              <div className="text-sm text-text mb-2">Scan Radius</div>
+            <div className="bg-surface border border-neutral rounded-xl p-3 shadow-sm">
+              <div className="text-sm text-text mb-2 font-bold">Scan Radius</div>
               <div className="flex gap-2">
                 {[10, 25, 50, 100].map(r => (
                   <button
                     key={r}
                     onClick={() => setRadius(r)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-mono transition-colors ${state.radius === r ? 'bg-cyan text-bg font-bold' : 'bg-surface text-tdim border border-cyan/15 hover:border-cyan/50'}`}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-mono transition-colors shadow-sm ${state.radius === r ? 'bg-cyan text-white font-bold' : 'bg-surface text-text border border-neutral hover:bg-neutral/50'}`}
                   >
                     {r}km
                   </button>
@@ -90,14 +90,14 @@ export default function SettingsScreen({ onShowToast }) {
               { key: 'adsblol', label: 'ADS-B.lol' },
               { key: 'airlabs', label: 'AirLabs.co' },
             ].map(api => (
-              <div key={api.key} className="bg-panel border border-cyan/15 rounded-xl p-3 flex items-center justify-between">
+              <div key={api.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">
                 <div>
-                  <div className="font-mono text-sm text-text">{api.label}</div>
+                  <div className="font-mono text-sm text-text font-bold">{api.label}</div>
                   <div className="text-xs text-tdim mt-1">{state.enabledAPIs[api.key] ? 'Enabled' : 'Disabled'}</div>
                 </div>
                 <button
                   onClick={() => toggleApi(api.key)}
-                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors ${state.enabledAPIs[api.key] ? 'bg-green/10 border border-green text-green hover:bg-green/20' : 'bg-surface border border-cyan/15 text-tdim hover:bg-surface/80'}`}
+                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.enabledAPIs[api.key] ? 'bg-cargo border border-cargo text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
                 >
                   {state.enabledAPIs[api.key] ? 'ON' : 'OFF'}
                 </button>
@@ -110,17 +110,17 @@ export default function SettingsScreen({ onShowToast }) {
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔑 API KEYS</div>
           <div className="space-y-3">
-            <div className="bg-cyan/5 border border-cyan/20 rounded-xl p-4">
+            <div className="bg-surface border border-neutral rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <div className="font-mono text-sm text-cyan tracking-wider">⭐ AIRLABS.CO</div>
+                <div className="font-mono text-sm text-cyan tracking-wider font-bold">⭐ AIRLABS.CO</div>
                 {state.apiKeysConfigured?.airLabs && (
-                  <span className="text-xs text-green font-mono">✓ Configured</span>
+                  <span className="text-xs text-cargo font-mono font-bold">✓ Configured</span>
                 )}
               </div>
               <input
                 type="password"
                 placeholder="Enter new key (or leave blank to keep current)"
-                className="w-full bg-surface border border-cyan/15 rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2"
+                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2 shadow-sm"
                 value={state.apiKeys.airLabs}
                 onChange={(e) => setApiKey('airLabs', e.target.value)}
               />
@@ -134,7 +134,7 @@ export default function SettingsScreen({ onShowToast }) {
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛡️ ADMIN CONTROLS</div>
           <button 
             onClick={() => setShowPasswordModal(true)}
-            className="w-full bg-red-500/20 border border-red-500 text-red-400 px-4 py-3 rounded-xl font-mono text-sm font-bold hover:bg-red-500/30 transition-colors disabled:opacity-50"
+            className="w-full bg-military border border-military text-white px-4 py-3 rounded-xl font-mono text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 shadow-sm"
           >
             SAVE AS GLOBAL DEFAULTS
           </button>
@@ -146,8 +146,8 @@ export default function SettingsScreen({ onShowToast }) {
         {/* About */}
         <div>
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">ℹ️ ABOUT</div>
-          <div className="bg-panel border border-cyan/15 rounded-xl p-3">
-            <div className="text-sm text-text">SkyWatch v6.0</div>
+          <div className="bg-surface border border-neutral rounded-xl p-3 shadow-sm">
+            <div className="text-sm text-text font-bold">SkyWatch v6.0</div>
             <div className="text-xs text-tdim mt-1">Next.js Edition with Real-time Flight Tracking</div>
           </div>
         </div>
@@ -155,14 +155,14 @@ export default function SettingsScreen({ onShowToast }) {
 
       {/* Password Modal Overlay */}
       {showPasswordModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-bg/80 backdrop-blur-sm">
-          <div className="bg-panel border border-cyan/30 rounded-2xl w-full max-w-xs p-6 shadow-2xl">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-neutral/80 backdrop-blur-sm">
+          <div className="bg-surface border border-neutral rounded-2xl w-full max-w-xs p-6 shadow-2xl">
             <div className="font-mono font-bold text-lg text-cyan mb-2 text-center">🛡️ Admin Verification</div>
             <p className="text-xs text-tdim mb-4 text-center">Enter admin password to save settings globally.</p>
             <input 
               type="password"
               placeholder="Password"
-              className="w-full bg-bg border border-cyan/20 rounded-lg px-3 py-2 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest"
+              className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest shadow-sm"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAdminSave()}
@@ -171,7 +171,7 @@ export default function SettingsScreen({ onShowToast }) {
             <div className="flex gap-2">
               <button 
                 onClick={() => { setShowPasswordModal(false); setAdminPassword(''); }}
-                className="flex-1 bg-surface border border-cyan/20 text-tdim px-3 py-2 rounded-lg font-mono text-xs hover:bg-surface/80"
+                className="flex-1 bg-surface border border-neutral text-tdim px-3 py-2 rounded-lg font-mono text-xs hover:bg-neutral/50 font-bold shadow-sm"
               >
                 CANCEL
               </button>

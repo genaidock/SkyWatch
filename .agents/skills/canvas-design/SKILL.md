@@ -79,3 +79,52 @@ Visual expression: Grid-based precision, bold photography or stark graphics, dra
 ### ESSENTIAL PRINCIPLES
 - **VISUAL PHILOSOPHY**: Create an aesthetic worldview to be expressed through design
 - **MINIMAL TEXT**: Always emphasize that text is sparse
+
+---
+
+## TECHNICAL EXECUTION ON CANVAS
+
+The 2025 landscape embraces Hybrid Duality—merging high-tech digital workflows with analog authenticity.
+
+- **PDF Canvas Tools:** When engineering printable or document-based canvases, leverage vector-driven logic similar to Figma, Adobe InDesign, or Canva. Focus on grid systems, bleed margins, and scalable vector assets.
+- **PNG/Raster Canvas Tools:** For rich, textured outputs, emulate the pipelines of Procreate, Excalidraw, or AI-assisted generation (Midjourney references). Introduce grain, halftones, and organic noise.
+- **HTML Canvas API / WebGL:** For interactive or generative canvas pieces, write precise JavaScript using HTML5 Canvas or WebGL to create spatial layouts that dynamically adjust or animate.
+- **SVG Mastery:** Output resolution-independent, mathematically beautiful SVG structures optimized for scalability and clean DOM injection.
+
+## 10 NEW PHILOSOPHY EXAMPLES (2025/2026 EDITION)
+
+1. **"Digital Brutalism"**: Raw code aesthetics, exposed structures, monospace typography, terminal greens on absolute black, brutal honesty in material.
+2. **"Wabi-Sabi Digital"**: Finding beauty in digital imperfection. Asymmetry, natural decay, introduced noise, glitch-art subtly applied, organic textures on digital grids.
+3. **"Retrofuturism"**: 80s/90s sci-fi nostalgia remixed with high-fidelity modern rendering. CRT screen artifacts, neon pinks and blues on black, grid landscapes.
+4. **"Metamodernism"**: The oscillation between sincerity and irony. Combining hopeful, vibrant aesthetics with cynical, raw textures. Collaging disparate elements into cohesive truths.
+5. **"Biophilic Design"**: Nature-centric patterns in digital space. Fractals, growth algorithms, organic clustering, earth tones, biomimicry in UI shapes.
+6. **"Data Aesthetics"**: Information presented as high art. Complex charts, data nodes, and flow lines elevated to purely beautiful visual abstractions.
+7. **"New Baroque"**: Rejection of minimalism. Excess, extreme detail, rich jewel tones, golden ratios, layered complexity, opulent visual density.
+8. **"Solarpunk"**: Radically optimistic futures. Green technology aesthetics, art nouveau influences, solar motifs, community-centric warmth, bright and clear atmospheres.
+9. **"Vaporwave"**: Elevated nostalgia. Mallsoft aesthetics, greco-roman busts alongside '80s computing iconography, pastel gradients, intentional surrealism.
+10. **"Hyperrealism"**: Photographic precision and trompe-l'oeil in digital environments. Extreme material accuracy, flawless lighting, glassmorphism pushed to optical perfection.
+
+## COLOR PHILOSOPHY SYSTEMS
+
+- **Pantone Integration:** Utilize modern yearly palettes (e.g., Pantone Color of the Year 2025) to anchor designs in contemporary emotional contexts.
+- **Color Emotion Mapping:** 
+  - *Ochre/Terracotta:* Grounded, tactile, historic.
+  - *Electric Cyan/Magenta:* High-energy, digital-first, futuristic.
+  - *Muted Sage/Desaturated Blues:* Calm, institutional trust, meditation.
+- **Seasonal Palette Theory:** Align color weights to seasonal psychology—spring pastels for growth/onboarding, deep winter shades for premium/exclusive experiences.
+
+## TYPOGRAPHY AS DESIGN
+
+- **Type as Image:** Typography is not just meant to be read; it is structural. Use extreme scale variations, tight leading, and geometric arrangements to turn words into sculptural graphic elements.
+- **Variable Fonts:** Exploit variable font axes (weight, width, optical size, slant) to create dynamic, fluid typography that responds to the canvas size or narrative intent without relying on multiple font files.
+- **Kinetic Typography Principles:** Even in static design, typography should imply movement. Use skew, directional alignment, and overlapping layers to create a sense of velocity and rhythm.
+
+## OUTPUT SPECIFICATIONS
+
+- **Print Specs:** Minimum 300 DPI. Use CMYK color profiles. Include a 0.125-inch (3mm) bleed area. Avoid rich black for small text (use 100% K).
+- **Screen Specs:** 72-96 DPI. Use sRGB color profiles. Design with exact pixel snapping for crisp edges on high-density displays.
+- **Social Media Canvases:**
+  - Instagram Square: 1080 x 1080px
+  - Instagram Portrait: 1080 x 1350px
+  - Stories/Reels: 1080 x 1920px (9:16 aspect ratio)
+- **Print-on-Demand (POD):** High contrast required. Avoid semi-transparent gradients which translate poorly to garment/product printing. Export as transparent PNG-24.

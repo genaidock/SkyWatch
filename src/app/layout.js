@@ -1,10 +1,11 @@
-import { Inter } from 'next/font/google';
+import { Space_Grotesk, Plus_Jakarta_Sans } from 'next/font/google';
 import Script from 'next/script';
 import { FlightProvider } from '@/context/FlightContext';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
 
 export const metadata = {
   title: 'SkyWatch — Live Flight Radar',
@@ -40,7 +41,7 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${inter.className} bg-bg text-text overflow-hidden h-[100dvh]`}>
+      <body className={`${spaceGrotesk.variable} ${jakarta.variable} font-sans bg-bg text-text overflow-hidden h-[100dvh]`}>
         <FlightProvider>
           {children}
         </FlightProvider>

@@ -2,6 +2,7 @@
 import { haversine, getNearbyAirports, getAirportName } from './utils';
 
 const ROUTE_CACHE = {};
+const ROUTE_FETCH_ATTEMPTS = {};
 const ROUTE_PROMISES = {};
 const ROUTE_TTL = 10 * 60 * 1000; // 10 minutes
 let RATE_LIMITED_UNTIL = 0;
@@ -383,16 +384,21 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
 
 // Enrich routes using our new server-side endpoint
 export async function enrichRoutes(flights) {
+  const now = Date.now();
   const toFetch = flights.filter(
     f =>
       (f.from?.code === '—' || f.to?.code === '—') &&
       f.callsign &&
-      f.callsign !== '?'
+      f.callsign !== '?' &&
+      (!ROUTE_FETCH_ATTEMPTS[f.callsign] || now - ROUTE_FETCH_ATTEMPTS[f.callsign] > 60000)
   );
 
-  if (toFetch.length === 0) return flights;
+  if (toFetch.length === 0) return applyRouteCache(flights);
 
   const callsigns = Array.from(new Set(toFetch.map(f => f.callsign)));
+  
+  // Mark as attempted so we don't spam if it fails or rate limits
+  callsigns.forEach(cs => { ROUTE_FETCH_ATTEMPTS[cs] = now; });
   
   try {
     const res = await fetch('/api/routes', {

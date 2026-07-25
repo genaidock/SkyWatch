@@ -38,22 +38,24 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-bg text-text">
-      <div className={currentScreen === 'radar' ? 'contents' : 'hidden'}>
+    <div className="relative flex flex-col h-[100dvh] bg-bg text-text">
+      <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'radar' ? '' : 'hidden'}`}>
         <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />
       </div>
-      <div className={currentScreen === 'flights' ? 'contents' : 'hidden'}>
+      <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'flights' ? '' : 'hidden'}`}>
         <FlightsScreen onShowToast={showToastMessage} onSelectFlight={openFlightDetail} />
       </div>
-      <div className={currentScreen === 'alerts' ? 'contents' : 'hidden'}>
+      <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'alerts' ? '' : 'hidden'}`}>
         <AlertsScreen onSelectFlight={openFlightDetail} onShowToast={showToastMessage} />
       </div>
-      <div className={currentScreen === 'settings' ? 'contents' : 'hidden'}>
+      <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'settings' ? '' : 'hidden'}`}>
         <SettingsScreen onShowToast={showToastMessage} />
       </div>
       
       {currentScreen === 'detail' && (
-        <DetailScreen onShowToast={showToastMessage} onBack={() => setCurrentScreen('radar')} />
+        <div className="flex flex-col flex-1 overflow-hidden pb-24 absolute inset-0 z-40 bg-bg">
+          <DetailScreen onShowToast={showToastMessage} onBack={() => setCurrentScreen('radar')} />
+        </div>
       )}
 
       <BottomNav currentScreen={currentScreen} onScreenChange={setCurrentScreen} />

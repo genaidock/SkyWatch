@@ -11,6 +11,7 @@ const initialState = {
   userLat: null,
   userLon: null,
   locationLabel: 'Acquiring GPS...',
+  recenterTrigger: 0,
   radius: 100,
   filter: 'all',
   apiStatus: { type: 'demo', message: 'Initializing...' },
@@ -67,7 +68,10 @@ function flightReducer(state, action) {
         userLat: action.payload.lat,
         userLon: action.payload.lon,
         locationLabel: action.payload.label,
+        recenterTrigger: state.recenterTrigger + 1,
       };
+    case 'TRIGGER_RECENTER':
+      return { ...state, recenterTrigger: state.recenterTrigger + 1 };
     case 'SET_RADIUS':
       return { ...state, radius: action.payload };
     case 'SET_FILTER':
@@ -219,6 +223,7 @@ export function FlightProvider({ children }) {
   }, []);
 
   const recenterLocation = useCallback(() => {
+    dispatch({ type: 'TRIGGER_RECENTER' });
     if (typeof window === 'undefined' || !navigator?.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setLocation(pos.coords.latitude, pos.coords.longitude, `GPS ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),

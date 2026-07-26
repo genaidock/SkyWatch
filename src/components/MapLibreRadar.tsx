@@ -5,9 +5,9 @@ import MapGL, { Source, Layer, Marker, useMap } from 'react-map-gl/maplibre';
 import * as SunCalc from 'suncalc';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// SVG without glow filter for crisp display
+// SVG without glow filter for crisp display, perfectly centered in 48x48
 const PLANE_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <path d="M33 28v-4l-16-10V7c0-1.66-1.34-3-3-3s-3 1.34-3 3v7l-16 10v4l16-5V34l-4 3v4l7-2 7 2v-4l-4-3V23l16 5z" fill="COLOR" transform="translate(12, 10) scale(0.5)"/>
+  <path d="M33 28v-4l-16-10V7c0-1.66-1.34-3-3-3s-3 1.34-3 3v7l-16 10v4l16-5V34l-4 3v4l7-2 7 2v-4l-4-3V23l16 5z" fill="COLOR" transform="translate(17, 12) scale(0.5)"/>
 </svg>`;
 
 const HELI_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -23,12 +23,14 @@ const ICONS = {
   'plane-cyan': PLANE_SVG.replace(/COLOR/g, '#00e5ff'),
   'plane-amber': PLANE_SVG.replace(/COLOR/g, '#ffaa00'),
   'plane-red': PLANE_SVG.replace(/COLOR/g, '#ff003c'),
+  'plane-black': PLANE_SVG.replace(/COLOR/g, '#000000'),
   'heli-cyan': HELI_SVG.replace(/COLOR/g, '#00e5ff'),
   'heli-amber': HELI_SVG.replace(/COLOR/g, '#ffaa00'),
   'heli-red': HELI_SVG.replace(/COLOR/g, '#ff003c'),
+  'heli-black': HELI_SVG.replace(/COLOR/g, '#000000'),
 };
 
-export default function MapLibreRadar({ flights, selectedFlight, userLat, userLon, radius, onSelectFlight }) {
+export default function MapLibreRadar({ flights, selectedFlight, userLat, userLon, radius, recenterTrigger, onSelectFlight }) {
   const [iconsLoaded, setIconsLoaded] = useState(false);
   const [blinkTick, setBlinkTick] = useState(true);
   
@@ -38,12 +40,24 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
   const lastTimeRef = useRef(Date.now());
   const activeFlightsRef = useRef<any[]>([]);
 
-  // Blinker effect: Toggles every 500ms
+  // Realistic Aircraft Double-Strobe Effect
   useEffect(() => {
-    const interval = setInterval(() => {
-      setBlinkTick(b => !b);
-    }, 500);
-    return () => clearInterval(interval);
+    let timeout;
+    const strobeLoop = () => {
+      setBlinkTick(true);
+      timeout = setTimeout(() => {
+        setBlinkTick(false);
+        timeout = setTimeout(() => {
+          setBlinkTick(true);
+          timeout = setTimeout(() => {
+            setBlinkTick(false);
+            timeout = setTimeout(strobeLoop, 1200); // Wait 1.2s before next strobe
+          }, 80); // Second flash on
+        }, 120); // Gap between flashes
+      }, 80); // First flash on
+    };
+    strobeLoop();
+    return () => clearTimeout(timeout);
   }, []);
 
   // When flights prop changes, update our active tracking array
@@ -137,7 +151,10 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
               let stateColor = '#00e5ff'; // Cruising (Cyan)
               let stateSuffix = 'cyan';
               
-              if (selectedFlight?.id === f.id || f.onGround) {
+              if (selectedFlight?.id === f.id) {
+                stateColor = '#000000'; // Selected (Black)
+                stateSuffix = 'black';
+              } else if (f.onGround) {
                 stateColor = '#ffaa00'; // Amber
                 stateSuffix = 'amber';
               } else if (f.altitude < 3000) {
@@ -211,7 +228,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
         essential: true
       });
     }
-  }, [userLat, userLon, radius]);
+  }, [userLat, userLon, radius, recenterTrigger]);
 
   // Load custom SVG images into MapLibre on load
   const onMapLoad = useCallback((e) => {
@@ -253,7 +270,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
         longitude: userLon || 0,
         latitude: userLat || 0,
         zoom: initialZoom,
-        pitch: 45, // Slight 3D tilt
+        pitch: 60, // Dramatic 3D tilt
       }}
       mapStyle={mapStyleUrl}
       style={{ width: '100%', height: '100%' }}
@@ -272,6 +289,20 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
       interactiveLayerIds={['flight-points', 'flight-glow']}
       cursor="crosshair"
     >
+      {/* 3D Buildings Layer */}
+      <Layer
+        id="3d-buildings"
+        source="carto"
+        source-layer="building"
+        type="fill-extrusion"
+        minzoom={14}
+        paint={{
+          'fill-extrusion-color': '#E2E8F0',
+          'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 20],
+          'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
+          'fill-extrusion-opacity': 0.7
+        }}
+      />
       <Marker longitude={userLon} latitude={userLat}>
         <div className="flex flex-col items-center justify-center">
           <div className="w-4 h-4 rounded-full border flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.8)] bg-black/20 border-black/50">
@@ -288,10 +319,10 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
             id="flight-aura"
             type="circle"
             paint={{
-              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 20, 14],
+              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 30, 20],
               'circle-color': ['get', 'stateColor'],
-              'circle-opacity': 0.25,
-              'circle-blur': 1,
+              'circle-opacity': 0.4,
+              'circle-blur': 0.8,
               'circle-pitch-alignment': 'map',
             }}
           />
@@ -302,7 +333,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
             type="symbol"
             layout={{
               'icon-image': ['get', 'icon'],
-              'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.2, 0.85],
+              'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.6, 1.2],
               'icon-rotate': ['get', 'heading'],
               'icon-allow-overlap': true,
               'icon-rotation-alignment': 'map', // Lay flat on 3D map
@@ -315,11 +346,11 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
             id="flight-glow"
             type="circle"
             paint={{
-              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 4, 3],
+              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 5, 4],
               'circle-color': ['get', 'typeColor'],
               'circle-opacity': blinkTick ? 1.0 : 0.0, // React drives this blink!
               'circle-pitch-alignment': 'map',
-              'circle-stroke-width': 1.5,
+              'circle-stroke-width': 2,
               'circle-stroke-color': ['get', 'stateColor'],
               'circle-stroke-opacity': blinkTick ? 1.0 : 0.0,
             }}

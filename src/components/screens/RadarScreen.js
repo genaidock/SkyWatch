@@ -50,6 +50,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
                 userLat={state.userLat}
                 userLon={state.userLon}
                 radius={state.radius}
+                recenterTrigger={state.recenterTrigger}
                 onSelectFlight={onSelectFlight}
               />
             </>

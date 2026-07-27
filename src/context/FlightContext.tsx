@@ -28,6 +28,14 @@ const initialState = {
   apiKeysConfigured: {
     airLabs: false,
   },
+  planeTypeFilter: {
+    civil: true,
+    cargo: true,
+    private: true,
+    military: true,
+    helicopter: true,
+  },
+  curatedFilter: 'none',
 };
 
 function flightReducer(state, action) {
@@ -104,7 +112,13 @@ function flightReducer(state, action) {
         refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
         enabledAPIs: action.payload.enabledAPIs ?? state.enabledAPIs,
         apiKeysConfigured: action.payload.apiKeysConfigured ?? state.apiKeysConfigured,
+        planeTypeFilter: action.payload.planeTypeFilter ?? state.planeTypeFilter,
+        curatedFilter: action.payload.curatedFilter ?? state.curatedFilter,
       };
+    case 'SET_PLANE_TYPE_FILTER':
+      return { ...state, planeTypeFilter: action.payload };
+    case 'SET_CURATED_FILTER':
+      return { ...state, curatedFilter: action.payload };
     default:
       return state;
   }
@@ -125,6 +139,16 @@ export function FlightProvider({ children }) {
       if (savedKeys) {
         const parsed = JSON.parse(savedKeys);
         if (parsed.airLabs) dispatch({ type: 'SET_API_KEY', payload: { key: 'airLabs', value: parsed.airLabs } });
+      }
+      
+      const savedPlaneFilter = localStorage.getItem('skywatch_planefilter');
+      if (savedPlaneFilter) {
+        dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: JSON.parse(savedPlaneFilter) });
+      }
+      
+      const savedCuratedFilter = localStorage.getItem('skywatch_curatedFilter');
+      if (savedCuratedFilter) {
+        dispatch({ type: 'SET_CURATED_FILTER', payload: JSON.parse(savedCuratedFilter) });
       }
     } catch (e) { /* ignore */ }
   }, []);
@@ -243,6 +267,16 @@ export function FlightProvider({ children }) {
       savedKeys[key] = value;
       localStorage.setItem('skywatch_apikeys', JSON.stringify(savedKeys));
     } catch (e) { /* ignore */ }
+  }, []);
+
+  const setPlaneTypeFilter = useCallback((filter) => {
+    dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: filter });
+    try { localStorage.setItem('skywatch_planefilter', JSON.stringify(filter)); } catch (e) { /* ignore */ }
+  }, []);
+
+  const setCuratedFilter = useCallback((filter) => {
+    dispatch({ type: 'SET_CURATED_FILTER', payload: filter });
+    try { localStorage.setItem('skywatch_curatedFilter', JSON.stringify(filter)); } catch (e) { /* ignore */ }
   }, []);
 
   const updateGlobalSettings = useCallback(async (newSettings, password) => {
@@ -452,6 +486,8 @@ export function FlightProvider({ children }) {
     recenterLocation,
     updateGlobalSettings,
     trailsRef,
+    setPlaneTypeFilter,
+    setCuratedFilter,
   };
 
   return (

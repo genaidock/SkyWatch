@@ -8,6 +8,7 @@ import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
 import MapLibreRadar from '@/components/MapLibreRadar';
 import FlightCards from '@/components/FlightCards';
+import { CURATED_ICAOS } from '@/lib/curatedIcaos';
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
   const { state, trailsRef, recenterLocation } = useFlightContext();
@@ -17,13 +18,24 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
     setMounted(true);
   }, []);
 
-  const maxAlt = state.flights.length > 0 ? Math.max(...state.flights.map(f => f.altitude || 0)) : 0;
+  const visibleFlights = state.flights.filter(f => {
+    if (state.curatedFilter && state.curatedFilter !== 'none') {
+      const icao = (f.icao24 || f.id || '').toLowerCase();
+      if (!CURATED_ICAOS[state.curatedFilter]?.includes(icao)) {
+        return false;
+      }
+    }
+    const type = f.isHeli ? 'helicopter' : (f.category || 'civil');
+    return state.planeTypeFilter?.[type] !== false;
+  });
+
+  const maxAlt = visibleFlights.length > 0 ? Math.max(...visibleFlights.map(f => f.altitude || 0)) : 0;
   const isDemo = state.flights.length > 0 && state.flights.every(f => f.isDemo);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header title="SKYWATCH" subtitle="See flights around us...!!!" liveIndicator />
-      <StatBar flights={state.flights.length} radius={state.radius} maxAlt={maxAlt} />
+      <StatBar flights={visibleFlights.length} radius={state.radius} maxAlt={maxAlt} />
       <LocationBar location={state.locationLabel} onLocationClick={onLocationClick} onRecenter={recenterLocation} />
       <ApiStatus status={state.apiStatus} />
       {isDemo && (
@@ -45,7 +57,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
           ) : (
             <>
               <MapLibreRadar
-                flights={state.flights}
+                flights={visibleFlights}
                 selectedFlight={state.selectedFlight}
                 userLat={state.userLat}
                 userLon={state.userLon}
@@ -90,7 +102,7 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
           </div>
           <div className="text-xs font-mono text-text font-bold tracking-widest">NEARBY AIRCRAFT</div>
         </div>
-        <FlightCards flights={state.flights} selectedFlight={state.selectedFlight} onSelectFlight={onSelectFlight} />
+        <FlightCards flights={visibleFlights} selectedFlight={state.selectedFlight} onSelectFlight={onSelectFlight} />
       </div>
     </div>
   );

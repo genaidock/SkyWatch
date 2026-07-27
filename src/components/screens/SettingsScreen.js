@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
+import { CURATED_ICAOS } from '@/lib/curatedIcaos';
 
 export default function SettingsScreen({ onShowToast }) {
-  const { state, setApiKey, setEnabledAPIs, setRadius, updateGlobalSettings } = useFlightContext();
+  const { state, setApiKey, setEnabledAPIs, setRadius, updateGlobalSettings, setPlaneTypeFilter, setCuratedFilter } = useFlightContext();
   const [adminPassword, setAdminPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -34,6 +35,7 @@ export default function SettingsScreen({ onShowToast }) {
         refreshInterval: state.refreshInterval,
         enabledAPIs: state.enabledAPIs,
         apiKeys: state.apiKeys,
+        curatedFilter: state.curatedFilter,
       }, adminPassword);
       onShowToast('Global settings updated successfully!');
       setShowPasswordModal(false);
@@ -100,6 +102,69 @@ export default function SettingsScreen({ onShowToast }) {
                   className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.enabledAPIs[api.key] ? 'bg-cargo border border-cargo text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
                 >
                   {state.enabledAPIs[api.key] ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Curated Filters */}
+        <div>
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🎯 CURATED FILTERS</div>
+          <div className="bg-surface border border-neutral rounded-xl p-3 shadow-sm mb-6">
+            <div className="text-xs text-tdim mb-3 leading-relaxed">
+              Overrides aircraft type settings to show only specific fleets of interest.
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setCuratedFilter('none')}
+                className={`w-full py-2 px-3 rounded-lg text-xs font-mono transition-colors text-left border ${
+                  state.curatedFilter === 'none' || !state.curatedFilter
+                    ? 'bg-cyan/15 border-cyan text-cyan font-bold'
+                    : 'bg-surface border-neutral text-text hover:border-cyan/30'
+                }`}
+              >
+                None (Show All)
+              </button>
+              {Object.keys(CURATED_ICAOS).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCuratedFilter(cat)}
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-mono transition-colors text-left border flex justify-between items-center ${
+                    state.curatedFilter === cat
+                      ? 'bg-cyan/15 border-cyan text-cyan font-bold'
+                      : 'bg-surface border-neutral text-text hover:border-cyan/30'
+                  }`}
+                >
+                  <span>{cat}</span>
+                  <span className="text-[10px] opacity-70 bg-black/20 px-2 py-0.5 rounded-full">{CURATED_ICAOS[cat].length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Aircraft Types */}
+        <div>
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">✈️ AIRCRAFT TYPES</div>
+          <div className="space-y-3">
+            {[
+              { key: 'civil', label: 'Civilian / Commercial' },
+              { key: 'cargo', label: 'Cargo Freighters' },
+              { key: 'private', label: 'Private / VIP' },
+              { key: 'military', label: 'Military' },
+              { key: 'helicopter', label: 'Helicopters' },
+            ].map(type => (
+              <div key={type.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div>
+                  <div className="font-mono text-sm text-text font-bold">{type.label}</div>
+                  <div className="text-xs text-tdim mt-1">{state.planeTypeFilter?.[type.key] !== false ? 'Visible' : 'Hidden'}</div>
+                </div>
+                <button
+                  onClick={() => setPlaneTypeFilter({ ...state.planeTypeFilter, [type.key]: state.planeTypeFilter?.[type.key] === false ? true : false })}
+                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.planeTypeFilter?.[type.key] !== false ? 'bg-cyan border border-cyan text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
+                >
+                  {state.planeTypeFilter?.[type.key] !== false ? 'SHOW' : 'HIDE'}
                 </button>
               </div>
             ))}

@@ -276,6 +276,15 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     });
   }
 
+  // Source 6: OpenSky (free)
+  if (enabledAPIs.opensky !== false) {
+    sources.push({
+      name: 'OpenSky',
+      url: proxied(`https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`),
+      parser: (data) => parseOpenSky(data, userLat, userLon, radiusKm),
+    });
+  }
+
   const sourceResults = await Promise.allSettled(
     sources.map(async (source) => {
       try {

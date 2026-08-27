@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSettings, saveSettings, invalidateKeyCache } from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_SETTINGS = {
   radius: 100,
   refreshInterval: 60,

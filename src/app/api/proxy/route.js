@@ -6,6 +6,8 @@ const ALLOWED_HOSTS = new Set([
   'api.adsb.lol',
   'airlabs.co',
   'api.adsbdb.com',
+  'api.adsb.fi',
+  'opensky-network.org',
 ]);
 
 const HOST_KEY_PARAM = {

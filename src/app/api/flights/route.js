@@ -20,7 +20,7 @@ function cacheKey(lat, lon, radius) {
   return `flights:${rLat}:${rLon}:${rRadius}`;
 }
 
-async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
+async function fetchWithTimeout(url, ms = FETCH_TIMEOUT, customHeaders = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -29,7 +29,8 @@ async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
       redirect: 'error',
       headers: {
         'User-Agent': 'SkyWatch/6.0 (genaidock.com; flight-tracker)',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        ...customHeaders
       }
     });
   } finally {
@@ -131,8 +132,13 @@ export async function GET(request) {
   }
 
   if (enabledAPIs.opensky) {
+    let authHeader = {};
+    if (keys.openskyUsername && keys.openskyPassword) {
+      authHeader = { 'Authorization': 'Basic ' + Buffer.from(`${keys.openskyUsername}:${keys.openskyPassword}`).toString('base64') };
+    }
+
     fetchers.push(
-      fetchWithTimeout(`https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`)
+      fetchWithTimeout(`https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`, FETCH_TIMEOUT, authHeader)
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseOpenSky(d, lat, lon, radiusKm) : [])
         .catch(() => [])

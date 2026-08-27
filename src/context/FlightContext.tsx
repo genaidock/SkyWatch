@@ -136,6 +136,8 @@ export function FlightProvider({ children }) {
       if (savedKeys) {
         const parsed = JSON.parse(savedKeys);
         if (parsed.airLabs) dispatch({ type: 'SET_API_KEY', payload: { key: 'airLabs', value: parsed.airLabs } });
+        if (parsed.openskyUsername) dispatch({ type: 'SET_API_KEY', payload: { key: 'openskyUsername', value: parsed.openskyUsername } });
+        if (parsed.openskyPassword) dispatch({ type: 'SET_API_KEY', payload: { key: 'openskyPassword', value: parsed.openskyPassword } });
       }
       
       const savedPlaneFilter = localStorage.getItem('skywatch_planefilter');
@@ -355,7 +357,7 @@ export function FlightProvider({ children }) {
     const radius = override.radius ?? state.radius;
     try {
       setApiStatus('loading', 'Fetching flights...');
-      const flights = await fetchFlights(lat, lon, radius, state.enabledAPIs);
+      const flights = await fetchFlights(lat, lon, radius, state.enabledAPIs, state.apiKeys);
       await processFlightData(flights);
     } catch (e) {
       setApiStatus('error', 'Failed to fetch flights');
@@ -400,7 +402,11 @@ export function FlightProvider({ children }) {
             if (data.flights) {
               if (data.flights.length === 0 && state.enabledAPIs.opensky) {
                 console.warn('SSE returned 0 flights. Falling back to client-side fetch to bypass server IP blocks.');
-                const fallbackFlights = await fetchFlights(state.userLat, state.userLon, state.radius, state.enabledAPIs, { airLabs: state.apiKeys.airLabs });
+                const fallbackFlights = await fetchFlights(state.userLat, state.userLon, state.radius, state.enabledAPIs, { 
+                  airLabs: state.apiKeys.airLabs,
+                  openskyUsername: state.apiKeys.openskyUsername,
+                  openskyPassword: state.apiKeys.openskyPassword
+                });
                 if (fallbackFlights.length > 0) {
                   processFlightData(fallbackFlights);
                   return;

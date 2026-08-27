@@ -7,11 +7,15 @@ const ROUTE_PROMISES = {};
 const ROUTE_TTL = 10 * 60 * 1000; // 10 minutes
 let RATE_LIMITED_UNTIL = 0;
 
-async function fetchWithTimeout(url, timeoutMs) {
+async function fetchWithTimeout(url, timeoutMs, customHeaders = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { signal: controller.signal, redirect: 'error' });
+    return await fetch(url, { 
+      signal: controller.signal, 
+      redirect: 'error',
+      headers: { ...customHeaders }
+    });
   } finally {
     clearTimeout(id);
   }
@@ -282,9 +286,14 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
 
   // Source 6: OpenSky (free)
   if (enabledAPIs.opensky !== false) {
+    let authHeader = {};
+    if (apiKeys?.openskyUsername && apiKeys?.openskyPassword) {
+      authHeader = { 'Authorization': 'Basic ' + Buffer.from(`${apiKeys.openskyUsername}:${apiKeys.openskyPassword}`).toString('base64') };
+    }
     sources.push({
       name: 'OpenSky',
       url: `https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`,
+      headers: authHeader,
       parser: (data) => parseOpenSky(data, userLat, userLon, radiusKm),
     });
   }
@@ -292,7 +301,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
   const sourceResults = await Promise.allSettled(
     sources.map(async (source) => {
       try {
-        const response = await fetchWithTimeout(source.url, 2500);
+        const response = await fetchWithTimeout(source.url, 8000, source.headers || {});
         if (!response.ok) throw new Error(`${response.status}`);
 
         const data = await response.json();

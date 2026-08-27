@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   },
   apiKeys: {
     airLabs: '',
+    openskyUsername: '',
+    openskyPassword: '',
   },
 };
 
@@ -29,6 +31,8 @@ export async function GET() {
       enabledAPIs: { ...DEFAULT_SETTINGS.enabledAPIs, ...(s.enabledAPIs || {}) },
       apiKeysConfigured: {
         airLabs: !!(s.apiKeys && s.apiKeys.airLabs),
+        openskyUsername: !!(s.apiKeys && s.apiKeys.openskyUsername),
+        openskyPassword: !!(s.apiKeys && s.apiKeys.openskyPassword),
       },
     };
 
@@ -60,7 +64,9 @@ export async function POST(request) {
 
     const mergedKeys = { ...(current.apiKeys || {}) };
     const incomingKeys = settings?.apiKeys || {};
-    if (incomingKeys.airLabs) mergedKeys.airLabs = String(incomingKeys.airLabs).trim();
+    if (incomingKeys.airLabs !== undefined) mergedKeys.airLabs = String(incomingKeys.airLabs).trim();
+    if (incomingKeys.openskyUsername !== undefined) mergedKeys.openskyUsername = String(incomingKeys.openskyUsername).trim();
+    if (incomingKeys.openskyPassword !== undefined) mergedKeys.openskyPassword = String(incomingKeys.openskyPassword).trim();
 
     const merged = {
       radius: settings?.radius ?? current.radius,
@@ -80,6 +86,8 @@ export async function POST(request) {
         enabledAPIs: merged.enabledAPIs,
         apiKeysConfigured: {
           airLabs: !!mergedKeys.airLabs,
+          openskyUsername: !!mergedKeys.openskyUsername,
+          openskyPassword: !!mergedKeys.openskyPassword,
         },
       },
     });

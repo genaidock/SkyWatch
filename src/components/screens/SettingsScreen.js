@@ -156,7 +156,33 @@ export default function SettingsScreen({ onShowToast }) {
                 onChange={(e) => setApiKey('airLabs', e.target.value)}
               />
             </div>
-
+            
+            <div className="bg-surface border border-neutral rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-mono text-sm text-cyan tracking-wider font-bold">⭐ OPENSKY NETWORK</div>
+                {(state.apiKeysConfigured?.openskyUsername || state.apiKeysConfigured?.openskyPassword) && (
+                  <span className="text-xs text-cargo font-mono font-bold">✓ Configured</span>
+                )}
+              </div>
+              <div className="text-xs text-tdim mb-3 leading-relaxed">
+                Provide a free OpenSky username and password to unlock a 10x higher rate limit, bypass server IP blocks, and expand map coverage.
+              </div>
+              <input
+                type="text"
+                placeholder="Username (leave blank to keep current)"
+                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2 shadow-sm"
+                value={state.apiKeys.openskyUsername || ''}
+                onChange={(e) => setApiKey('openskyUsername', e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="Password (leave blank to keep current)"
+                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none shadow-sm"
+                value={state.apiKeys.openskyPassword || ''}
+                onChange={(e) => setApiKey('openskyPassword', e.target.value)}
+              />
+            </div>
+            
           </div>
         </div>
 

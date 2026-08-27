@@ -9,7 +9,7 @@ import {
 } from '@/lib/flightApi';
 
 const CACHE_TTL = 15;
-const FETCH_TIMEOUT = 2500;
+const FETCH_TIMEOUT = 8000;
 const RATE_LIMIT_MAX = 30; // requests per window
 const RATE_LIMIT_WINDOW = 60; // seconds
 

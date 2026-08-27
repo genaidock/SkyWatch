@@ -8,7 +8,6 @@ import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
 import MapLibreRadar from '@/components/MapLibreRadar';
 import FlightCards from '@/components/FlightCards';
-import { CURATED_ICAOS } from '@/lib/curatedIcaos';
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
   const { state, trailsRef, recenterLocation } = useFlightContext();
@@ -19,12 +18,6 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
   }, []);
 
   const visibleFlights = state.flights.filter(f => {
-    if (state.curatedFilter && state.curatedFilter !== 'none') {
-      const icao = (f.icao24 || f.id || '').toLowerCase();
-      if (!CURATED_ICAOS[state.curatedFilter]?.includes(icao)) {
-        return false;
-      }
-    }
     const type = f.isHeli ? 'helicopter' : (f.category || 'civil');
     return state.planeTypeFilter?.[type] !== false;
   });

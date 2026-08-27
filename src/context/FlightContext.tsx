@@ -36,7 +36,6 @@ const initialState = {
     military: true,
     helicopter: true,
   },
-  curatedFilter: 'none',
 };
 
 function flightReducer(state, action) {
@@ -114,12 +113,9 @@ function flightReducer(state, action) {
         enabledAPIs: action.payload.enabledAPIs ?? state.enabledAPIs,
         apiKeysConfigured: action.payload.apiKeysConfigured ?? state.apiKeysConfigured,
         planeTypeFilter: action.payload.planeTypeFilter ?? state.planeTypeFilter,
-        curatedFilter: action.payload.curatedFilter ?? state.curatedFilter,
       };
     case 'SET_PLANE_TYPE_FILTER':
       return { ...state, planeTypeFilter: action.payload };
-    case 'SET_CURATED_FILTER':
-      return { ...state, curatedFilter: action.payload };
     default:
       return state;
   }
@@ -145,11 +141,6 @@ export function FlightProvider({ children }) {
       const savedPlaneFilter = localStorage.getItem('skywatch_planefilter');
       if (savedPlaneFilter) {
         dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: JSON.parse(savedPlaneFilter) });
-      }
-      
-      const savedCuratedFilter = localStorage.getItem('skywatch_curatedFilter');
-      if (savedCuratedFilter) {
-        dispatch({ type: 'SET_CURATED_FILTER', payload: JSON.parse(savedCuratedFilter) });
       }
     } catch (e) { /* ignore */ }
   }, []);
@@ -273,11 +264,6 @@ export function FlightProvider({ children }) {
   const setPlaneTypeFilter = useCallback((filter) => {
     dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: filter });
     try { localStorage.setItem('skywatch_planefilter', JSON.stringify(filter)); } catch (e) { /* ignore */ }
-  }, []);
-
-  const setCuratedFilter = useCallback((filter) => {
-    dispatch({ type: 'SET_CURATED_FILTER', payload: filter });
-    try { localStorage.setItem('skywatch_curatedFilter', JSON.stringify(filter)); } catch (e) { /* ignore */ }
   }, []);
 
   const updateGlobalSettings = useCallback(async (newSettings, password) => {
@@ -488,7 +474,6 @@ export function FlightProvider({ children }) {
     updateGlobalSettings,
     trailsRef,
     setPlaneTypeFilter,
-    setCuratedFilter,
   };
 
   return (

@@ -8,6 +8,7 @@ export default function LocationModal({ show, onClose }) {
   const { state, setLocation } = useFlightContext();
   const [manLat, setManLat] = useState('');
   const [manLon, setManLon] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
 
   const handlePickAirport = (lat, lon, code, name) => {
     setLocation(lat, lon, `📍 ${code} — ${name}`);
@@ -50,19 +51,38 @@ export default function LocationModal({ show, onClose }) {
           <div className="flex justify-between items-end">
             <p className="font-sans text-[10px] tracking-widest uppercase font-semibold text-slate-500">Quick Select</p>
             <button
+              disabled={isLocating}
               onClick={() => {
                 if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition((pos) => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    setLocation(lat, lon, `GPS ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
-                    onClose();
-                  });
+                  setIsLocating(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const lat = pos.coords.latitude;
+                      const lon = pos.coords.longitude;
+                      setLocation(lat, lon, `GPS ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+                      setIsLocating(false);
+                      onClose();
+                    },
+                    (err) => {
+                      setIsLocating(false);
+                      let msg = err.message;
+                      if (err.code === 1) msg = "Permission denied. Please allow location access in your browser settings.";
+                      if (err.code === 2) msg = "Position unavailable. Please try again.";
+                      if (err.code === 3) msg = "Request timed out.";
+                      alert(`GPS Error: ${msg}`);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                  );
+                } else {
+                  alert('Geolocation is not supported by your browser.');
                 }
               }}
-              className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-sans text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1"
+              className={`bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-sans text-xs font-bold transition-colors shadow-sm flex items-center gap-1 ${isLocating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
             >
-              <span className="text-cyan">🎯</span> USE GPS
+              <span className={isLocating ? 'animate-spin inline-block' : 'text-cyan'}>
+                {isLocating ? '⏳' : '🎯'}
+              </span> 
+              <span>{isLocating ? 'LOCATING...' : 'USE GPS'}</span>
             </button>
           </div>
 

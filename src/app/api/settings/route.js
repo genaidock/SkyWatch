@@ -24,7 +24,7 @@ export async function GET() {
     const publicSettings = {
       radius: s.radius ?? DEFAULT_SETTINGS.radius,
       refreshInterval: s.refreshInterval ?? DEFAULT_SETTINGS.refreshInterval,
-      enabledAPIs: s.enabledAPIs ?? DEFAULT_SETTINGS.enabledAPIs,
+      enabledAPIs: { ...DEFAULT_SETTINGS.enabledAPIs, ...(s.enabledAPIs || {}) },
       apiKeysConfigured: {
         airLabs: !!(s.apiKeys && s.apiKeys.airLabs),
       },
@@ -63,7 +63,7 @@ export async function POST(request) {
     const merged = {
       radius: settings?.radius ?? current.radius,
       refreshInterval: settings?.refreshInterval ?? current.refreshInterval,
-      enabledAPIs: settings?.enabledAPIs ?? current.enabledAPIs,
+      enabledAPIs: { ...DEFAULT_SETTINGS.enabledAPIs, ...current.enabledAPIs, ...(settings?.enabledAPIs || {}) },
       apiKeys: mergedKeys,
     };
 

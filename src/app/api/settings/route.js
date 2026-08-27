@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
     airplaneslive: true,
     adsblol: true,
     adsbfi: true,
+    opensky: true,
     airlabs: false,
   },
   apiKeys: {

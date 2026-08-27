@@ -3,6 +3,7 @@ import {
   parseAirplanesLive,
   parseADSBLol,
   parseAirLabs,
+  parseOpenSky,
   uniqueFlights,
 } from '@/lib/flightApi';
 import { getApiKeys } from '@/lib/redis';
@@ -70,6 +71,15 @@ async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { airplanes
     );
   }
 
+  if (enabledAPIs.opensky) {
+    fetchers.push(
+      fetchWithTimeout(`https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseOpenSky(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
+    );
+  }
+
   const results = await Promise.all(fetchers);
   const flights = uniqueFlights(results.flat().filter(Boolean));
 
@@ -86,6 +96,7 @@ export async function GET(request) {
     airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
     adsbfi: searchParams.get('adsbfi') !== 'false',
+    opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
 

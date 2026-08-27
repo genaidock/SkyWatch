@@ -89,6 +89,7 @@ export default function SettingsScreen({ onShowToast }) {
               { key: 'airplaneslive', label: 'Airplanes.live' },
               { key: 'adsblol', label: 'ADS-B.lol' },
               { key: 'adsbfi', label: 'ADS-B.fi' },
+              { key: 'opensky', label: 'OpenSky Network' },
               { key: 'airlabs', label: 'AirLabs.co' },
             ].map(api => (
               <div key={api.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">

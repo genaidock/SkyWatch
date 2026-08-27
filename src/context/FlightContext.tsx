@@ -393,14 +393,23 @@ export function FlightProvider({ children }) {
           reconnectAttempt = 0; // Reset on successful connection
         };
 
-        es.onmessage = (event) => {
+        es.onmessage = async (event) => {
+          if (!sseActive.current) return;
           try {
             const data = JSON.parse(event.data);
             if (data.flights) {
+              if (data.flights.length === 0 && state.enabledAPIs.opensky) {
+                console.warn('SSE returned 0 flights. Falling back to client-side fetch to bypass server IP blocks.');
+                const fallbackFlights = await fetchFlights(state.userLat, state.userLon, state.radius, state.enabledAPIs, { airLabs: state.apiKeys.airLabs });
+                if (fallbackFlights.length > 0) {
+                  processFlightData(fallbackFlights);
+                  return;
+                }
+              }
               processFlightData(data.flights);
             }
           } catch (e) {
-            console.error('SSE parse error:', e);
+            console.error('SSE Parse Error:', e);
           }
         };
 

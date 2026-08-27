@@ -220,8 +220,12 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     const res = await fetchWithTimeout(`/api/flights?${params}`, 12000);
     if (res.ok) {
       const data = await res.json();
-      if (data.flights) {
+      if (data.flights && data.flights.length > 0) {
         return data.flights;
+      } else {
+        // If server returns exactly 0 flights, we fallback to client-side fetching
+        // because Vercel/server IPs are frequently blocked by OpenSky resulting in false 0s.
+        console.warn('Server returned 0 flights, falling back to client fetch to bypass IP blocks');
       }
     }
   } catch (e) {
@@ -280,7 +284,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
   if (enabledAPIs.opensky !== false) {
     sources.push({
       name: 'OpenSky',
-      url: proxied(`https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`),
+      url: `https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`,
       parser: (data) => parseOpenSky(data, userLat, userLon, radiusKm),
     });
   }

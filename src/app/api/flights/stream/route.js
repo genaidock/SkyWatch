@@ -15,7 +15,14 @@ async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    return await fetch(url, { headers: { 'Accept': 'application/json' }, signal: controller.signal, redirect: 'error' });
+    return await fetch(url, { 
+      signal: controller.signal, 
+      redirect: 'error',
+      headers: {
+        'User-Agent': 'SkyWatch/6.0 (genaidock.com; flight-tracker)',
+        'Accept': 'application/json'
+      }
+    });
   } finally {
     clearTimeout(timer);
   }

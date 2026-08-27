@@ -9,7 +9,7 @@ import {
 } from '@/lib/flightApi';
 
 const CACHE_TTL = 15;
-const FETCH_TIMEOUT = 8000;
+const FETCH_TIMEOUT = 2500;
 const RATE_LIMIT_MAX = 30; // requests per window
 const RATE_LIMIT_WINDOW = 60; // seconds
 
@@ -69,6 +69,7 @@ export async function GET(request) {
   const enabledAPIs = {
     airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
+    adsbfi: searchParams.get('adsbfi') !== 'false',
     opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
@@ -99,7 +100,16 @@ export async function GET(request) {
     fetchers.push(
       fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm) : [])
+        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADS-B.lol') : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.adsbfi) {
+    fetchers.push(
+      fetchWithTimeout(`https://api.adsb.fi/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADSB.fi') : [])
         .catch(() => [])
     );
   }

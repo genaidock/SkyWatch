@@ -8,7 +8,7 @@ import {
 import { getApiKeys } from '@/lib/redis';
 
 const FETCH_INTERVAL = 5000;
-const FETCH_TIMEOUT = 8000;
+const FETCH_TIMEOUT = 2500;
 
 async function fetchWithTimeout(url, ms = FETCH_TIMEOUT) {
   const controller = new AbortController();
@@ -47,7 +47,16 @@ async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { airplanes
     fetchers.push(
       fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm) : [])
+        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADS-B.lol') : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.adsbfi) {
+    fetchers.push(
+      fetchWithTimeout(`https://api.adsb.fi/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADSB.fi') : [])
         .catch(() => [])
     );
   }
@@ -76,6 +85,7 @@ export async function GET(request) {
   const enabledAPIs = {
     airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
+    adsbfi: searchParams.get('adsbfi') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
 

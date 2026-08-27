@@ -19,6 +19,7 @@ const initialState = {
   enabledAPIs: {
       airplaneslive: true,
       adsblol: true,
+      adsbfi: true,
       opensky: true,
       airlabs: false,
     },

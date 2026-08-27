@@ -63,7 +63,7 @@ export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
   }
 }
 
-export function parseADSBLol(data, userLat, userLon, radiusKm) {
+export function parseADSBLol(data, userLat, userLon, radiusKm, sourceName = 'ADS-B.lol') {
   try {
     const ac = data.ac || data.aircraft || [];
     if (!Array.isArray(ac)) return [];
@@ -97,7 +97,7 @@ export function parseADSBLol(data, userLat, userLon, radiusKm) {
           to: { code: '—', city: '—' },
           progress: 0.5,
           firstSeen: new Date(),
-          source: 'ADS-B.lol',
+          source: sourceName,
         };
       })
       .filter(Boolean)
@@ -267,10 +267,19 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     });
   }
 
+  // Source 5: ADSB.fi (free)
+  if (enabledAPIs.adsbfi !== false) {
+    sources.push({
+      name: 'ADSB.fi',
+      url: proxied(`https://api.adsb.fi/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`),
+      parser: (data) => parseADSBLol(data, userLat, userLon, radiusKm, 'ADSB.fi'),
+    });
+  }
+
   const sourceResults = await Promise.allSettled(
     sources.map(async (source) => {
       try {
-        const response = await fetchWithTimeout(source.url, 5000);
+        const response = await fetchWithTimeout(source.url, 2500);
         if (!response.ok) throw new Error(`${response.status}`);
 
         const data = await response.json();

@@ -220,7 +220,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     const res = await fetchWithTimeout(`/api/flights?${params}`, 12000);
     if (res.ok) {
       const data = await res.json();
-      if (data.flights && data.flights.length > 0) {
+      if (data.flights) {
         return data.flights;
       }
     }
@@ -296,12 +296,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     .flatMap(r => (r as any).value)
     .filter(Boolean);
 
-  if (flights.length > 0) {
-    return uniqueFlights(flights);
-  }
-
-  // Fallback: return demo flights
-  return generateDemoFlights(userLat, userLon, radiusKm);
+  return uniqueFlights(flights);
 }
 
 export function uniqueFlights(flights) {

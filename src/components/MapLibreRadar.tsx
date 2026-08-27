@@ -209,7 +209,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
 
 
   // Initial empty source (will be instantly overwritten by RAF loop)
-  const emptyGeoJson = useMemo(() => ({ type: 'FeatureCollection', features: [] }), []);
+  const emptyGeoJson = useMemo(() => ({ type: 'FeatureCollection' as const, features: [] }), []);
 
   // Fly to new location when user changes location via dropdown
   useEffect(() => {

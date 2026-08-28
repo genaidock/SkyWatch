@@ -38,6 +38,29 @@ async function fetchWithTimeout(url, ms = FETCH_TIMEOUT, customHeaders = {}) {
   }
 }
 
+const OPENSKY_MEM_CACHE = new Map();
+const OPENSKY_TTL = 15000; // 15 seconds
+
+async function fetchOpenSkyCached(bbox, fetchUrl, authHeader, lat, lon, radiusKm) {
+  const cached = OPENSKY_MEM_CACHE.get(bbox);
+  const now = Date.now();
+  if (cached && (now - cached.ts < OPENSKY_TTL)) {
+    return cached.data;
+  }
+  try {
+    const res = await fetchWithTimeout(fetchUrl, FETCH_TIMEOUT, authHeader);
+    if (res.ok) {
+      const data = await res.json();
+      const parsed = parseOpenSky(data, lat, lon, radiusKm);
+      OPENSKY_MEM_CACHE.set(bbox, { ts: now, data: parsed });
+      return parsed;
+    }
+  } catch (e) {
+    if (cached) return cached.data;
+  }
+  return cached ? cached.data : [];
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const lat = parseFloat(searchParams.get('lat'));
@@ -75,9 +98,7 @@ export async function GET(request) {
   }
 
   const enabledAPIs = {
-    airplaneslive: searchParams.get('airplaneslive') !== 'false',
     adsblol: searchParams.get('adsblol') !== 'false',
-    adsbfi: searchParams.get('adsbfi') !== 'false',
     opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
@@ -95,29 +116,11 @@ export async function GET(request) {
 
   const fetchers = [];
 
-  if (enabledAPIs.airplaneslive) {
-    fetchers.push(
-      fetchWithTimeout(`https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseAirplanesLive(d, lat, lon, radiusKm) : [])
-        .catch(() => [])
-    );
-  }
-
   if (enabledAPIs.adsblol) {
     fetchers.push(
       fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADS-B.lol') : [])
-        .catch(() => [])
-    );
-  }
-
-  if (enabledAPIs.adsbfi) {
-    fetchers.push(
-      fetchWithTimeout(`https://api.adsb.fi/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADSB.fi') : [])
         .catch(() => [])
     );
   }
@@ -137,11 +140,9 @@ export async function GET(request) {
       authHeader = { 'Authorization': 'Basic ' + Buffer.from(`${keys.openskyUsername}:${keys.openskyPassword}`).toString('base64') };
     }
 
+    const openSkyUrl = `https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`;
     fetchers.push(
-      fetchWithTimeout(`https://opensky-network.org/api/states/all?lamin=${(lat - deg).toFixed(4)}&lomin=${(lon - degLon).toFixed(4)}&lamax=${(lat + deg).toFixed(4)}&lomax=${(lon + degLon).toFixed(4)}`, FETCH_TIMEOUT, authHeader)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d ? parseOpenSky(d, lat, lon, radiusKm) : [])
-        .catch(() => [])
+      fetchOpenSkyCached(bbox, openSkyUrl, authHeader, lat, lon, radiusKm)
     );
   }
 

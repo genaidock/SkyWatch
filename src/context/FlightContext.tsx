@@ -17,12 +17,10 @@ const initialState = {
   apiStatus: { type: 'demo', message: 'Initializing...' },
   alerts: [],
   enabledAPIs: {
-      airplaneslive: true,
-      adsblol: true,
-      adsbfi: true,
-      opensky: true,
-      airlabs: false,
-    },
+    adsblol: true,
+    opensky: true,
+    airlabs: false,
+  },
   apiKeys: {
     airLabs: '',
   },

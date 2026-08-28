@@ -86,22 +86,23 @@ export default function SettingsScreen({ onShowToast }) {
           <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔌 DATA SOURCES</div>
           <div className="space-y-3">
             {[
-              { key: 'airplaneslive', label: 'Airplanes.live' },
-              { key: 'adsblol', label: 'ADS-B.lol' },
-              { key: 'adsbfi', label: 'ADS-B.fi' },
-              { key: 'opensky', label: 'OpenSky Network' },
-              { key: 'airlabs', label: 'AirLabs.co' },
+              { key: 'adsblol', label: 'ADS-B.lol', desc: 'Open Community ADS-B Feed (Real-time)' },
+              { key: 'opensky', label: 'OpenSky Network', desc: 'Global Academic & Crowdsourced Network' },
+              { key: 'airlabs', label: 'AirLabs.co', desc: 'Commercial Aviation API (Requires API Key)' },
             ].map(api => (
               <div key={api.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">
                 <div>
                   <div className="font-mono text-sm text-text font-bold">{api.label}</div>
-                  <div className="text-xs text-tdim mt-1">{state.enabledAPIs[api.key] ? 'Enabled' : 'Disabled'}</div>
+                  <div className="text-xs text-tdim mt-0.5">{api.desc}</div>
+                  <div className="text-xs font-mono text-tdim mt-1">
+                    Status: <span className={state.enabledAPIs?.[api.key] ? 'text-cargo font-bold' : 'text-tdim'}>{state.enabledAPIs?.[api.key] ? 'Enabled' : 'Disabled'}</span>
+                  </div>
                 </div>
                 <button
                   onClick={() => toggleApi(api.key)}
-                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.enabledAPIs[api.key] ? 'bg-cargo border border-cargo text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
+                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.enabledAPIs?.[api.key] ? 'bg-cargo border border-cargo text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
                 >
-                  {state.enabledAPIs[api.key] ? 'ON' : 'OFF'}
+                  {state.enabledAPIs?.[api.key] ? 'ON' : 'OFF'}
                 </button>
               </div>
             ))}

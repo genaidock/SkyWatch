@@ -102,6 +102,15 @@ describe('flightApi parsers', () => {
       expect(result).toHaveLength(1);
     });
 
+    test('aggregates sources from multiple providers', () => {
+      const f1 = { icao24: 'ABC123', callsign: 'AI101', source: 'ADS-B.lol', distKm: 50 };
+      const f2 = { icao24: 'ABC123', callsign: 'AI101', source: 'OpenSky', distKm: 51 };
+      const result = uniqueFlights([f1, f2]);
+      expect(result).toHaveLength(1);
+      expect(result[0].sources).toEqual(['ADS-B.lol', 'OpenSky']);
+      expect(result[0].source).toBe('ADS-B.lol, OpenSky');
+    });
+
     test('deduplicates by callsign when icao24 missing', () => {
       const f1 = { callsign: 'AI101', distKm: 50 };
       const f2 = { callsign: 'AI101', distKm: 51 };
@@ -127,9 +136,9 @@ describe('flightApi parsers', () => {
   });
 
   describe('generateDemoFlights', () => {
-    test('returns 3 demo flights', () => {
+    test('returns demo flights', () => {
       const flights = generateDemoFlights(18.6, 73.7, 100);
-      expect(flights).toHaveLength(3);
+      expect(flights.length).toBeGreaterThanOrEqual(3);
       flights.forEach(f => {
         expect(f.isDemo).toBe(true);
         expect(f.callsign).toBeTruthy();

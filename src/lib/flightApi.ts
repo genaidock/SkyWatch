@@ -24,6 +24,7 @@ async function fetchWithTimeout(url, timeoutMs, customHeaders = {}) {
 // Parse responses from different flight data APIs
 export function parseAirplanesLive(data, userLat, userLon, radiusKm) {
   try {
+    if (!data) return [];
     const ac = data.ac || data.aircraft || [];
     if (!Array.isArray(ac)) return [];
 
@@ -248,16 +249,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
   const degLon = deg / (cosLat || 1);
   const bbox = `${(userLat - deg).toFixed(4)},${(userLon - degLon).toFixed(4)},${(userLat + deg).toFixed(4)},${(userLon + degLon).toFixed(4)}`;
 
-  // Source 1: Airplanes.live (free, no key needed)
-  if (enabledAPIs.airplaneslive !== false) {
-    sources.push({
-      name: 'Airplanes.live',
-      url: proxied(`https://api.airplanes.live/v2/point/${latF}/${lonF}/${Math.ceil(radiusKm)}`),
-      parser: (data) => parseAirplanesLive(data, userLat, userLon, radiusKm),
-    });
-  }
-
-  // Source 2: ADS-B.lol (free)
+  // Source 1: ADS-B.lol (free community network)
   if (enabledAPIs.adsblol !== false) {
     sources.push({
       name: 'ADS-B.lol',
@@ -266,25 +258,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     });
   }
 
-  // Source 4: AirLabs (key injected server-side by proxy)
-  if (enabledAPIs.airlabs !== false) {
-    sources.push({
-      name: 'AirLabs',
-      url: proxied(`https://airlabs.co/api/v9/flights?bbox=${bbox}`),
-      parser: (data) => parseAirLabs(data, userLat, userLon, radiusKm),
-    });
-  }
-
-  // Source 5: ADSB.fi (free)
-  if (enabledAPIs.adsbfi !== false) {
-    sources.push({
-      name: 'ADSB.fi',
-      url: proxied(`https://api.adsb.fi/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`),
-      parser: (data) => parseADSBLol(data, userLat, userLon, radiusKm, 'ADSB.fi'),
-    });
-  }
-
-  // Source 6: OpenSky (free)
+  // Source 2: OpenSky Network (free global network)
   if (enabledAPIs.opensky !== false) {
     let authHeader = {};
     if (apiKeys?.openskyUsername && apiKeys?.openskyPassword) {
@@ -295,6 +269,15 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
       url: `https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`,
       headers: authHeader,
       parser: (data) => parseOpenSky(data, userLat, userLon, radiusKm),
+    });
+  }
+
+  // Source 3: AirLabs (key injected server-side or passed)
+  if (enabledAPIs.airlabs && (apiKeys?.airLabs || apiKeys?.airlabs)) {
+    sources.push({
+      name: 'AirLabs',
+      url: proxied(`https://airlabs.co/api/v9/flights?bbox=${bbox}`),
+      parser: (data) => parseAirLabs(data, userLat, userLon, radiusKm),
     });
   }
 
@@ -325,19 +308,35 @@ export function uniqueFlights(flights) {
   const map = new Map();
   flights.forEach((flight) => {
     const key = flight.icao24 || flight.callsign || flight.id;
+    const initialSources = Array.isArray(flight.sources) && flight.sources.length > 0
+      ? flight.sources
+      : (flight.source ? [flight.source] : []);
+
     const existing = map.get(key);
     if (!existing) {
-      map.set(key, flight);
+      map.set(key, {
+        ...flight,
+        sources: initialSources,
+        source: initialSources.join(', ') || flight.source,
+      });
       return;
     }
 
-    // keep the most complete data
+    const existingSources = Array.isArray(existing.sources) ? existing.sources : (existing.source ? [existing.source] : []);
+    const mergedSources = Array.from(new Set([...existingSources, ...initialSources]));
+
+    // keep the most complete data across providers
     const merged = {
       ...existing,
       ...flight,
-      from: flight.from?.code !== '—' ? flight.from : existing.from,
-      to: flight.to?.code !== '—' ? flight.to : existing.to,
-      source: existing.source || flight.source,
+      from: (flight.from?.code && flight.from?.code !== '—') ? flight.from : existing.from,
+      to: (flight.to?.code && flight.to?.code !== '—') ? flight.to : existing.to,
+      country: (flight.country && flight.country !== '—' && flight.country !== 'Encoded') ? flight.country : existing.country,
+      reg: (flight.reg && flight.reg !== '—') ? flight.reg : existing.reg,
+      type: (flight.type && flight.type !== '—') ? flight.type : existing.type,
+      desc: flight.desc || existing.desc || '',
+      sources: mergedSources,
+      source: mergedSources.join(', '),
     };
     map.set(key, merged);
   });

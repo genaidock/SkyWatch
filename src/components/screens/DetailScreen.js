@@ -160,7 +160,16 @@ export default function DetailScreen({ onBack }) {
           <div className="grid grid-cols-2 gap-3">
             <DetailItem label="From" value={f.from?.code && f.from?.code !== '—' ? `${f.from.code} · ${f.from.city}` : 'Not Available'} />
             <DetailItem label="To" value={f.to?.code && f.to?.code !== '—' ? `${f.to.code} · ${f.to.city}` : 'Not Available'} />
-            <DetailItem label="Source" value={f.source || '—'} />
+            <div className="bg-surface border border-neutral rounded-2xl p-3 shadow-sm">
+              <div className="text-[10px] text-tdim uppercase tracking-[0.32em] mb-2 font-bold">Source</div>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {(Array.isArray(f.sources) && f.sources.length > 0 ? f.sources : (f.source ? f.source.split(',').map(s => s.trim()) : ['—'])).map((s, idx) => (
+                  <span key={idx} className="px-2 py-0.5 bg-cargo/10 border border-cargo/30 rounded-md font-mono text-xs text-cargo font-bold">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
             <DetailItem label="Distance" value={`${f.distKm?.toFixed?.(1) ?? '—'} km`} />
           </div>
           {(!f.from?.code || f.from?.code === '—') && (

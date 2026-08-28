@@ -7,9 +7,7 @@ const DEFAULT_SETTINGS = {
   radius: 100,
   refreshInterval: 60,
   enabledAPIs: {
-    airplaneslive: true,
     adsblol: true,
-    adsbfi: true,
     opensky: true,
     airlabs: false,
   },

@@ -11,7 +11,7 @@ import FlightCards from '@/components/FlightCards';
 import SensorModeSelector from '@/components/SensorModeSelector';
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
-  const { state, trailsRef, recenterLocation, setSensorMode, setChaseMode } = useFlightContext();
+  const { state, trailsRef, recenterLocation, setSensorMode, setChaseMode, setViewport } = useFlightContext();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -29,8 +29,18 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header title="SKYWATCH" subtitle="See flights around us...!!!" liveIndicator />
-      <StatBar flights={visibleFlights.length} radius={state.radius} maxAlt={maxAlt} />
-      <LocationBar location={state.locationLabel} onLocationClick={onLocationClick} onRecenter={recenterLocation} />
+      <StatBar
+        flights={visibleFlights.length}
+        radius={state.viewport?.radiusKm || state.radius}
+        maxAlt={maxAlt}
+        isPanned={state.viewport?.isPanned}
+      />
+      <LocationBar
+        location={state.locationLabel}
+        onLocationClick={onLocationClick}
+        onRecenter={recenterLocation}
+        isPanned={state.viewport?.isPanned}
+      />
       <ApiStatus status={state.apiStatus} />
       {isDemo && (
         <div className="mx-3 mt-1 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/40 rounded-lg text-yellow-400 text-xs font-mono text-center animate-pulse">
@@ -62,6 +72,11 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
                 onSelectFlight={onSelectFlight}
                 isChaseMode={state.isChaseMode}
                 onExitChase={() => setChaseMode(false)}
+                onViewportChange={(centerLat, centerLon, radiusKm, isPanned) => {
+                  setViewport(centerLat, centerLon, radiusKm, isPanned);
+                }}
+                trailsRef={trailsRef}
+                sensorMode={state.sensorMode}
               />
 
               {/* Floating Tactical Sensor Vision Selector */}

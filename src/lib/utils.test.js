@@ -1,4 +1,4 @@
-import { haversine, bearing, degreesToRadians, radiansToDegrees, headingToDirection, flagToCountry, getAirportName, getNearbyAirports, SQUAWK_MEANINGS, AIRCRAFT_DB, getAircraftInfo } from '@/lib/utils';
+import { haversine, bearing, degreesToRadians, radiansToDegrees, headingToDirection, flagToCountry, getAirportName, getNearbyAirports, SQUAWK_MEANINGS, AIRCRAFT_DB, getAircraftInfo, calculateGreatCircleRoute } from '@/lib/utils';
 
 describe('utils', () => {
   describe('degreesToRadians / radiansToDegrees', () => {
@@ -138,6 +138,36 @@ describe('utils', () => {
       const unk = getAircraftInfo('XYZ999');
       expect(unk.maker).toBe('—');
       expect(unk.full).toBe('XYZ999');
+    });
+  });
+
+  describe('calculateGreatCircleRoute', () => {
+    test('returns empty array if any coordinates are missing or invalid', () => {
+      expect(calculateGreatCircleRoute(null, 10, 20, 30)).toEqual([]);
+      expect(calculateGreatCircleRoute(10, null, 20, 30)).toEqual([]);
+      expect(calculateGreatCircleRoute(10, 20, NaN, 30)).toEqual([]);
+      expect(calculateGreatCircleRoute(10, 20, 30, NaN)).toEqual([]);
+    });
+
+    test('returns endpoints when points are identical', () => {
+      const route = calculateGreatCircleRoute(28.5562, 77.1000, 28.5562, 77.1000);
+      expect(route.length).toBe(2);
+      expect(route[0]).toEqual([77.1000, 28.5562]);
+      expect(route[1]).toEqual([77.1000, 28.5562]);
+    });
+
+    test('generates intermediate geodesic waypoints between London and New York', () => {
+      const lonLat = calculateGreatCircleRoute(51.5074, -0.1278, 40.7128, -74.0060, 20);
+      expect(lonLat.length).toBe(20);
+      // Start matches [lon, lat] of London
+      expect(lonLat[0][0]).toBeCloseTo(-0.1278, 3);
+      expect(lonLat[0][1]).toBeCloseTo(51.5074, 3);
+      // End matches [lon, lat] of New York
+      expect(lonLat[19][0]).toBeCloseTo(-74.0060, 3);
+      expect(lonLat[19][1]).toBeCloseTo(40.7128, 3);
+      // Midpoint on great circle arches north towards 56-57 deg lat (higher than start/end lat)
+      const mid = lonLat[10];
+      expect(mid[1]).toBeGreaterThan(51.5);
     });
   });
 });

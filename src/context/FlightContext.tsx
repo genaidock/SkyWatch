@@ -36,6 +36,12 @@ const initialState = {
   },
   sensorMode: 'normal' as 'normal' | 'nvg' | 'flir' | 'crt',
   isChaseMode: false,
+  viewport: {
+    centerLat: null as number | null,
+    centerLon: null as number | null,
+    radiusKm: 100,
+    isPanned: false,
+  },
 };
 
 function flightReducer(state, action) {
@@ -77,9 +83,32 @@ function flightReducer(state, action) {
         userLon: action.payload.lon,
         locationLabel: action.payload.label,
         recenterTrigger: state.recenterTrigger + 1,
+        viewport: {
+          centerLat: action.payload.lat,
+          centerLon: action.payload.lon,
+          radiusKm: state.radius,
+          isPanned: false,
+        },
       };
     case 'TRIGGER_RECENTER':
-      return { ...state, recenterTrigger: state.recenterTrigger + 1 };
+      return {
+        ...state,
+        recenterTrigger: state.recenterTrigger + 1,
+        viewport: {
+          centerLat: state.userLat,
+          centerLon: state.userLon,
+          radiusKm: state.radius,
+          isPanned: false,
+        },
+      };
+    case 'SET_VIEWPORT':
+      return {
+        ...state,
+        viewport: {
+          ...state.viewport,
+          ...action.payload,
+        },
+      };
     case 'SET_RADIUS':
       return { ...state, radius: action.payload };
     case 'SET_FILTER':
@@ -286,6 +315,13 @@ export function FlightProvider({ children }) {
     dispatch({ type: 'SET_CHASE_MODE', payload: active });
   }, []);
 
+  const setViewport = useCallback((centerLat: number, centerLon: number, radiusKm: number, isPanned: boolean) => {
+    dispatch({
+      type: 'SET_VIEWPORT',
+      payload: { centerLat, centerLon, radiusKm, isPanned },
+    });
+  }, []);
+
   const updateGlobalSettings = useCallback(async (newSettings, password) => {
     const res = await fetch('/api/settings', {
       method: 'POST',
@@ -370,9 +406,14 @@ export function FlightProvider({ children }) {
 
   // Polling fallback (used when SSE is unavailable)
   const pollFlights = useCallback(async (override: any = {}) => {
-    const lat = override.lat ?? state.userLat;
-    const lon = override.lon ?? state.userLon;
-    const radius = override.radius ?? state.radius;
+    const activeCenterLat = state.viewport.centerLat ?? state.userLat;
+    const activeCenterLon = state.viewport.centerLon ?? state.userLon;
+    const activeRadius = state.viewport.radiusKm || state.radius;
+
+    const lat = override.lat ?? activeCenterLat;
+    const lon = override.lon ?? activeCenterLon;
+    const radius = override.radius ?? activeRadius;
+    if (lat === null || lon === null) return;
     try {
       setApiStatus('loading', 'Fetching flights...');
       const flights = await fetchFlights(lat, lon, radius, state.enabledAPIs, state.apiKeys);
@@ -381,92 +422,97 @@ export function FlightProvider({ children }) {
       setApiStatus('error', 'Failed to fetch flights');
       addAlert(`Fetch error: ${e.message || e}`);
     }
-  }, [state.userLat, state.userLon, state.radius, state.enabledAPIs, setApiStatus, processFlightData, addAlert]);
+  }, [state.viewport.centerLat, state.viewport.centerLon, state.viewport.radiusKm, state.userLat, state.userLon, state.radius, state.enabledAPIs, state.apiKeys, setApiStatus, processFlightData, addAlert]);
+
+  // Active coordinates for viewport-adaptive streaming
+  const activeLat = state.viewport.centerLat ?? state.userLat;
+  const activeLon = state.viewport.centerLon ?? state.userLon;
+  const activeRadius = state.viewport.radiusKm || state.radius;
+  const roundedLat = activeLat != null ? Math.round(activeLat * 100) / 100 : null;
+  const roundedLon = activeLon != null ? Math.round(activeLon * 100) / 100 : null;
+  const clampedRadius = Math.max(15, Math.min(350, Math.round(activeRadius)));
 
   // SSE for real-time updates
-    useEffect(() => {
-      const canSSE = typeof window !== 'undefined' && window.EventSource && !sseActive.current;
-      if (!canSSE || state.userLat === null || state.userLon === null) return;
+  useEffect(() => {
+    const canSSE = typeof window !== 'undefined' && window.EventSource && !sseActive.current;
+    if (!canSSE || roundedLat === null || roundedLon === null) return;
 
-      let reconnectAttempt = 0;
-      const MAX_RECONNECT_ATTEMPTS = 10;
-      const BASE_RECONNECT_DELAY = 1000; // 1 second
-      const MAX_RECONNECT_DELAY = 30000; // 30 seconds
-      let reconnectTimer = null;
+    let reconnectAttempt = 0;
+    const MAX_RECONNECT_ATTEMPTS = 10;
+    const BASE_RECONNECT_DELAY = 1000; // 1 second
+    const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+    let reconnectTimer = null;
 
-      const connect = () => {
-        const params = new URLSearchParams({
-          lat: state.userLat.toFixed(4),
-          lon: state.userLon.toFixed(4),
-          radius: String(state.radius),
-        });
-        for (const [key, val] of Object.entries(state.enabledAPIs)) {
-          params.set(key, String(!!val));
-        }
-        const url = `/api/flights/stream?${params}`;
-        const es = new EventSource(url);
-        let connected = false;
+    const connect = () => {
+      const params = new URLSearchParams({
+        lat: roundedLat.toFixed(4),
+        lon: roundedLon.toFixed(4),
+        radius: String(clampedRadius),
+      });
+      for (const [key, val] of Object.entries(state.enabledAPIs)) {
+        params.set(key, String(!!val));
+      }
+      const url = `/api/flights/stream?${params}`;
+      const es = new EventSource(url);
+      let connected = false;
 
-        es.onopen = () => {
-          connected = true;
-          sseActive.current = true;
-          reconnectAttempt = 0; // Reset on successful connection
-        };
+      es.onopen = () => {
+        connected = true;
+        sseActive.current = true;
+        reconnectAttempt = 0; // Reset on successful connection
+      };
 
-        es.onmessage = async (event) => {
-          if (!sseActive.current) return;
-          try {
-            const data = JSON.parse(event.data);
-            if (data.flights) {
-              if (data.flights.length === 0 && state.enabledAPIs.opensky) {
-                console.warn('SSE returned 0 flights. Falling back to client-side fetch to bypass server IP blocks.');
-                const fallbackFlights = await fetchFlights(state.userLat, state.userLon, state.radius, state.enabledAPIs, { 
-                  airLabs: state.apiKeys.airLabs,
-                  openskyUsername: state.apiKeys.openskyUsername,
-                  openskyPassword: state.apiKeys.openskyPassword
-                });
-                if (fallbackFlights.length > 0) {
-                  processFlightData(fallbackFlights);
-                  return;
-                }
+      es.onmessage = async (event) => {
+        if (!sseActive.current) return;
+        try {
+          const data = JSON.parse(event.data);
+          if (data.flights) {
+            if (data.flights.length === 0 && state.enabledAPIs.opensky) {
+              console.warn('SSE returned 0 flights. Falling back to client-side fetch.');
+              const fallbackFlights = await fetchFlights(roundedLat, roundedLon, clampedRadius, state.enabledAPIs, { 
+                airLabs: state.apiKeys.airLabs,
+                openskyUsername: state.apiKeys.openskyUsername,
+                openskyPassword: state.apiKeys.openskyPassword
+              });
+              if (fallbackFlights.length > 0) {
+                processFlightData(fallbackFlights);
+                return;
               }
-              processFlightData(data.flights);
             }
-          } catch (e) {
-            console.error('SSE Parse Error:', e);
+            processFlightData(data.flights);
           }
-        };
-
-        es.onerror = () => {
-          sseActive.current = false;
-          es.close();
-        
-          // Exponential backoff reconnection
-          if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
-            const delay = Math.min(
-              BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempt) + Math.random() * 1000,
-              MAX_RECONNECT_DELAY
-            );
-            reconnectAttempt++;
-            console.log(`SSE reconnecting in ${delay}ms (attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS})`);
-            reconnectTimer = setTimeout(connect, delay);
-          } else {
-            console.error('SSE max reconnection attempts reached, falling back to polling');
-          }
-        };
-
-        // Store reference for cleanup
-        (window as any).__skywatch_sse = es;
+        } catch (e) {
+          console.error('SSE Parse Error:', e);
+        }
       };
 
-      connect();
-
-      return () => {
+      es.onerror = () => {
         sseActive.current = false;
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        if ((window as any).__skywatch_sse) (window as any).__skywatch_sse.close();
+        es.close();
+      
+        if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
+          const delay = Math.min(
+            BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempt) + Math.random() * 1000,
+            MAX_RECONNECT_DELAY
+          );
+          reconnectAttempt++;
+          reconnectTimer = setTimeout(connect, delay);
+        } else {
+          console.error('SSE max reconnection attempts reached, falling back to polling');
+        }
       };
-    }, [state.userLat, state.userLon, state.radius, processFlightData]);
+
+      (window as any).__skywatch_sse = es;
+    };
+
+    connect();
+
+    return () => {
+      sseActive.current = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if ((window as any).__skywatch_sse) (window as any).__skywatch_sse.close();
+    };
+  }, [roundedLat, roundedLon, clampedRadius, state.enabledAPIs, processFlightData]);
 
   // Fallback polling (only runs if SSE is not active)
   useEffect(() => {
@@ -509,6 +555,7 @@ export function FlightProvider({ children }) {
     setPlaneTypeFilter,
     setSensorMode,
     setChaseMode,
+    setViewport,
   };
 
   return (

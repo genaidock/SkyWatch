@@ -6,7 +6,7 @@ function formatTime(date) {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
-export default function StatBar({ flights = 0, radius = 100, maxAlt = 0 }) {
+export default function StatBar({ flights = 0, radius = 100, maxAlt = 0, isPanned = false }) {
   const [timeStr, setTimeStr] = useState('--:--');
 
   useEffect(() => {
@@ -23,8 +23,10 @@ export default function StatBar({ flights = 0, radius = 100, maxAlt = 0 }) {
         <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Aircraft</div>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center py-4 px-2 border-r border-neutral">
-        <div className="text-sm font-bold font-display text-slate-900">{radius} km</div>
-        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">Radius</div>
+        <div className="text-sm font-bold font-display text-slate-900">{Math.round(radius)} km</div>
+        <div className="text-[10px] text-slate-500 font-sans tracking-wide mt-0.5">
+          {isPanned ? 'View Span' : 'Radar Span'}
+        </div>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center py-4 px-2 border-r border-neutral">
         <div className="text-sm font-bold font-display text-slate-900">

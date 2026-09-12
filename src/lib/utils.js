@@ -300,3 +300,61 @@ export function isCloudflareBlock(statusCode, headers) {
   if (statusCode !== 403) return false;
   return Boolean(headers.get('cf-mitigated'));
 }
+
+/**
+ * Calculate intermediate coordinates along a great-circle arc between two points.
+ * Uses spherical linear interpolation (slerp) on unit sphere coordinates.
+ * @param {number} lat1 Latitude of start point in degrees
+ * @param {number} lon1 Longitude of start point in degrees
+ * @param {number} lat2 Latitude of end point in degrees
+ * @param {number} lon2 Longitude of end point in degrees
+ * @param {number} numPoints Number of discrete points to sample along the arc (default 25)
+ * @returns {Array<[number, number]>} Array of [lon, lat] coordinates (GeoJSON format)
+ */
+export function calculateGreatCircleRoute(lat1, lon1, lat2, lon2, numPoints = 25) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return [];
+  if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return [];
+
+  // If points are virtually identical, return simple segment
+  if (Math.abs(lat1 - lat2) < 0.0001 && Math.abs(lon1 - lon2) < 0.0001) {
+    return [[lon1, lat1], [lon2, lat2]];
+  }
+
+  const φ1 = degreesToRadians(lat1);
+  const λ1 = degreesToRadians(lon1);
+  const φ2 = degreesToRadians(lat2);
+  const λ2 = degreesToRadians(lon2);
+
+  // Angular distance d between points
+  const sinΔφ = Math.sin((φ2 - φ1) / 2);
+  const sinΔλ = Math.sin((λ2 - λ1) / 2);
+  const a = sinΔφ * sinΔφ + Math.cos(φ1) * Math.cos(φ2) * sinΔλ * sinΔλ;
+  const d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+
+  if (d === 0 || isNaN(d)) {
+    return [[lon1, lat1], [lon2, lat2]];
+  }
+
+  const coords = [];
+  const count = Math.max(2, numPoints);
+
+  for (let i = 0; i < count; i++) {
+    const f = i / (count - 1);
+    const A = Math.sin((1 - f) * d) / Math.sin(d);
+    const B = Math.sin(f * d) / Math.sin(d);
+
+    const x = A * Math.cos(φ1) * Math.cos(λ1) + B * Math.cos(φ2) * Math.cos(λ2);
+    const y = A * Math.cos(φ1) * Math.sin(λ1) + B * Math.cos(φ2) * Math.sin(λ2);
+    const z = A * Math.sin(φ1) + B * Math.sin(φ2);
+
+    const φ = Math.atan2(z, Math.sqrt(x * x + y * y));
+    const λ = Math.atan2(y, x);
+
+    coords.push([
+      radiansToDegrees(λ),
+      radiansToDegrees(φ)
+    ]);
+  }
+
+  return coords;
+}

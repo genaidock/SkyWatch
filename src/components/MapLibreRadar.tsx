@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import MapGL, { Source, Layer, Marker, useMap } from 'react-map-gl/maplibre';
 import * as SunCalc from 'suncalc';
 import CockpitHudOverlay from './CockpitHudOverlay';
+import { haversine, calculateGreatCircleRoute } from '../lib/utils';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // SVG without glow filter for crisp display, perfectly centered in 48x48
@@ -41,6 +42,9 @@ export default function MapLibreRadar({
   onSelectFlight,
   isChaseMode = false,
   onExitChase = () => {},
+  onViewportChange,
+  trailsRef,
+  sensorMode = 'normal',
 }: {
   flights: any[];
   selectedFlight: any;
@@ -51,15 +55,58 @@ export default function MapLibreRadar({
   onSelectFlight: (flight: any) => void;
   isChaseMode?: boolean;
   onExitChase?: () => void;
+  onViewportChange?: (centerLat: number, centerLon: number, radiusKm: number, isPanned: boolean) => void;
+  trailsRef?: React.MutableRefObject<Map<string, Array<{ lat: number; lon: number; ts: number }>>>;
+  sensorMode?: string;
 }) {
   const [iconsLoaded, setIconsLoaded] = useState(false);
   const [blinkTick, setBlinkTick] = useState(true);
+
+  // Dynamic path color adapting to tactical sensor vision modes
+  const pathColor = useMemo(() => {
+    switch (sensorMode) {
+      case 'crt': return '#ffaa00'; // Amber CRT
+      case 'nvg': return '#00ff66'; // Tactical NVG Green
+      case 'flir': return '#ffffff'; // Thermal White
+      default: return '#00f3ff'; // Tactical Cyan
+    }
+  }, [sensorMode]);
   
   // Refs for animation
   const mapRef = useRef(null);
   const rafRef = useRef(null);
   const lastTimeRef = useRef(Date.now());
   const activeFlightsRef = useRef<any[]>([]);
+  const moveTimerRef = useRef<any>(null);
+  const lastChaseViewportRef = useRef<number>(0);
+
+  // Viewport calculation on map pan/zoom
+  const handleMoveEnd = useCallback(() => {
+    if (!mapRef.current) return;
+    if (moveTimerRef.current) clearTimeout(moveTimerRef.current);
+
+    moveTimerRef.current = setTimeout(() => {
+      if (!mapRef.current) return;
+      const map = (mapRef.current as any).getMap?.() || mapRef.current;
+      if (!map.getCenter || !map.getBounds) return;
+
+      const center = map.getCenter();
+      const bounds = map.getBounds();
+      if (!center || !bounds) return;
+
+      const ne = bounds.getNorthEast();
+      const spanKm = haversine(center.lat, center.lng, ne.lat, ne.lng);
+      const effectiveRadius = Math.max(15, Math.min(350, Math.round(spanKm)));
+
+      let isPanned = false;
+      if (userLat != null && userLon != null) {
+        const distFromHome = haversine(userLat, userLon, center.lat, center.lng);
+        isPanned = distFromHome > 15;
+      }
+
+      onViewportChange?.(center.lat, center.lng, effectiveRadius, isPanned);
+    }, 300);
+  }, [userLat, userLon, onViewportChange]);
 
   // Realistic Aircraft Double-Strobe Effect
   useEffect(() => {
@@ -216,7 +263,94 @@ export default function MapLibreRadar({
           // Inject directly into MapLibre (Bypasses React rendering entirely!)
           source.setData(geoJson);
 
-          // 3. Dynamic Cockpit Chase Camera Tethering (60 FPS)
+          // 3. Dynamic Selected Flight Trail & Great-Circle Route
+          const trailSource: any = map.getSource('flight-trail-source');
+          const routeSource: any = map.getSource('flight-route-source');
+          const waypointsSource: any = map.getSource('flight-waypoints-source');
+
+          if (selectedFlight) {
+            const activeSel = activeFlightsRef.current.find(f => f.id === selectedFlight.id) || selectedFlight;
+            const curLat = activeSel.lat;
+            const curLon = activeSel.lon;
+
+            // A. Live Breadcrumb Trail from Position Buffer
+            if (trailSource && trailsRef?.current) {
+              const key = selectedFlight.icao24 || selectedFlight.callsign || selectedFlight.id;
+              const historyPts = trailsRef.current.get(key) || [];
+              const trailCoords = historyPts.map((p: any) => [p.lon, p.lat]);
+              if (curLon != null && curLat != null) {
+                trailCoords.push([curLon, curLat]);
+              }
+              if (trailCoords.length >= 2) {
+                trailSource.setData({
+                  type: 'FeatureCollection',
+                  features: [{
+                    type: 'Feature',
+                    geometry: { type: 'LineString', coordinates: trailCoords },
+                    properties: { type: 'trail' }
+                  }]
+                });
+              } else {
+                trailSource.setData(emptyGeoJson);
+              }
+            }
+
+            // B. Origin -> Plane -> Destination Great Circle Corridor
+            if (routeSource && waypointsSource) {
+              const depLat = selectedFlight.routeObj?.depLat ?? selectedFlight.depLat;
+              const depLon = selectedFlight.routeObj?.depLon ?? selectedFlight.depLon;
+              const arrLat = selectedFlight.routeObj?.arrLat ?? selectedFlight.arrLat;
+              const arrLon = selectedFlight.routeObj?.arrLon ?? selectedFlight.arrLon;
+
+              const routeFeatures: any[] = [];
+              const waypointFeatures: any[] = [];
+
+              if (curLat != null && curLon != null) {
+                // Flown segment: origin -> current
+                if (depLat != null && depLon != null) {
+                  const flownArc = calculateGreatCircleRoute(depLat, depLon, curLat, curLon, 30);
+                  if (flownArc.length >= 2) {
+                    routeFeatures.push({
+                      type: 'Feature',
+                      geometry: { type: 'LineString', coordinates: flownArc },
+                      properties: { segment: 'flown' }
+                    });
+                  }
+                  waypointFeatures.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [depLon, depLat] },
+                    properties: { label: selectedFlight.from?.code || 'DEP', role: 'origin' }
+                  });
+                }
+
+                // Planned segment: current -> destination
+                if (arrLat != null && arrLon != null) {
+                  const plannedArc = calculateGreatCircleRoute(curLat, curLon, arrLat, arrLon, 30);
+                  if (plannedArc.length >= 2) {
+                    routeFeatures.push({
+                      type: 'Feature',
+                      geometry: { type: 'LineString', coordinates: plannedArc },
+                      properties: { segment: 'planned' }
+                    });
+                  }
+                  waypointFeatures.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [arrLon, arrLat] },
+                    properties: { label: selectedFlight.to?.code || 'ARR', role: 'destination' }
+                  });
+                }
+              }
+
+              routeSource.setData({ type: 'FeatureCollection', features: routeFeatures });
+              waypointsSource.setData({ type: 'FeatureCollection', features: waypointFeatures });
+            }
+          } else {
+            if (trailSource) trailSource.setData(emptyGeoJson);
+            if (routeSource) routeSource.setData(emptyGeoJson);
+            if (waypointsSource) waypointsSource.setData(emptyGeoJson);
+          }
+
+          // 4. Dynamic Cockpit Chase Camera Tethering (60 FPS)
           if (isChaseMode && selectedFlight) {
             const chased = activeFlightsRef.current.find(f => f.id === selectedFlight.id);
             if (chased && chased.lat != null && chased.lon != null) {
@@ -225,6 +359,13 @@ export default function MapLibreRadar({
                 pitch: 65,
                 bearing: chased.heading || 0,
               });
+
+              // Periodically stream new airspace as the aircraft travels
+              const nowTime = Date.now();
+              if (!lastChaseViewportRef.current || nowTime - lastChaseViewportRef.current > 4000) {
+                lastChaseViewportRef.current = nowTime;
+                onViewportChange?.(chased.lat, chased.lon, 60, true);
+              }
             }
           }
         }
@@ -238,7 +379,7 @@ export default function MapLibreRadar({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [iconsLoaded, selectedFlight, isChaseMode]); // re-bind when selectedFlight or chase mode changes
+  }, [iconsLoaded, selectedFlight, isChaseMode, trailsRef]); // re-bind when selectedFlight, chase mode or trailsRef changes
 
 
   // Initial empty source (will be instantly overwritten by RAF loop)
@@ -334,6 +475,7 @@ export default function MapLibreRadar({
         style={{ width: '100%', height: '100%' }}
         interactive={true}
         onLoad={onMapLoad}
+        onMoveEnd={handleMoveEnd}
         onClick={(e) => {
           if (e.features && e.features.length > 0) {
             const clickedFlight = flights.find(f => f.id === e.features[0].properties.id);
@@ -371,69 +513,182 @@ export default function MapLibreRadar({
         </Marker>
 
         {iconsLoaded && (
-          <Source id="flights-source" type="geojson" data={emptyGeoJson}>
-            {/* Static Aura Glow */}
-            <Layer
-              id="flight-aura"
-              type="circle"
-              paint={{
-                'circle-radius': ['case', ['==', ['get', 'isSel'], true], 30, 20],
-                'circle-color': ['get', 'stateColor'],
-                'circle-opacity': 0.4,
-                'circle-blur': 0.8,
-                'circle-pitch-alignment': 'map',
-              }}
-            />
+          <>
+            {/* ─── Selected Flight Breadcrumb Trail ─── */}
+            <Source id="flight-trail-source" type="geojson" data={emptyGeoJson}>
+              <Layer
+                id="flight-trail-glow"
+                type="line"
+                paint={{
+                  'line-color': pathColor,
+                  'line-width': 6,
+                  'line-opacity': 0.35,
+                  'line-blur': 3,
+                }}
+              />
+              <Layer
+                id="flight-trail-core"
+                type="line"
+                layout={{
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                }}
+                paint={{
+                  'line-color': pathColor,
+                  'line-width': 2.5,
+                  'line-opacity': 0.9,
+                }}
+              />
+            </Source>
 
-            {/* Plane Symbol */}
-            <Layer
-              id="flight-points"
-              type="symbol"
-              layout={{
-                'icon-image': ['get', 'icon'],
-                'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.6, 1.2],
-                'icon-rotate': ['get', 'heading'],
-                'icon-allow-overlap': true,
-                'icon-rotation-alignment': 'map', // Lay flat on 3D map
-                'icon-pitch-alignment': 'map',
-              }}
-            />
-            
-            {/* Blinking Beacon Light (Rendered ON TOP of plane) */}
-            <Layer
-              id="flight-glow"
-              type="circle"
-              paint={{
-                'circle-radius': ['case', ['==', ['get', 'isSel'], true], 5, 4],
-                'circle-color': ['get', 'typeColor'],
-                'circle-opacity': blinkTick ? 1.0 : 0.0, // React drives this blink!
-                'circle-pitch-alignment': 'map',
-                'circle-stroke-width': 2,
-                'circle-stroke-color': ['get', 'stateColor'],
-                'circle-stroke-opacity': blinkTick ? 1.0 : 0.0,
-              }}
-            />
-            {/* Labels */}
-            <Layer
-              id="flight-labels"
-              type="symbol"
-              layout={{
-                'text-field': ['get', 'callsign'],
-                'text-font': ['Open Sans Regular'],
-                'text-size': 11,
-                'text-offset': [0, 1.5],
-                'text-anchor': 'top',
-                'text-allow-overlap': false,
-              }}
-              paint={{
-                'text-color': '#0F172A',
-                'text-halo-color': '#FFFFFF',
-                'text-halo-width': 2,
-              }}
-            />
-          </Source>
+            {/* ─── Selected Flight Origin -> Aircraft -> Destination Route ─── */}
+            <Source id="flight-route-source" type="geojson" data={emptyGeoJson}>
+              {/* Flown corridor glow & core */}
+              <Layer
+                id="route-flown-glow"
+                type="line"
+                filter={['==', ['get', 'segment'], 'flown']}
+                paint={{
+                  'line-color': pathColor,
+                  'line-width': 5,
+                  'line-opacity': 0.25,
+                  'line-blur': 3,
+                }}
+              />
+              <Layer
+                id="route-flown-core"
+                type="line"
+                filter={['==', ['get', 'segment'], 'flown']}
+                layout={{
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                }}
+                paint={{
+                  'line-color': pathColor,
+                  'line-width': 2,
+                  'line-opacity': 0.75,
+                }}
+              />
+              {/* Planned / remaining corridor (dashed) */}
+              <Layer
+                id="route-planned-core"
+                type="line"
+                filter={['==', ['get', 'segment'], 'planned']}
+                paint={{
+                  'line-color': pathColor,
+                  'line-width': 2,
+                  'line-dasharray': [2, 2],
+                  'line-opacity': 0.65,
+                }}
+              />
+            </Source>
+
+            {/* ─── Waypoint Nodes (Origin / Destination Airports) ─── */}
+            <Source id="flight-waypoints-source" type="geojson" data={emptyGeoJson}>
+              <Layer
+                id="waypoint-glow"
+                type="circle"
+                paint={{
+                  'circle-radius': 10,
+                  'circle-color': pathColor,
+                  'circle-opacity': 0.35,
+                  'circle-blur': 0.8,
+                }}
+              />
+              <Layer
+                id="waypoint-core"
+                type="circle"
+                paint={{
+                  'circle-radius': 4.5,
+                  'circle-color': pathColor,
+                  'circle-stroke-width': 1.5,
+                  'circle-stroke-color': '#0F172A',
+                }}
+              />
+              <Layer
+                id="waypoint-labels"
+                type="symbol"
+                layout={{
+                  'text-field': ['get', 'label'],
+                  'text-font': ['Open Sans Regular'],
+                  'text-size': 11,
+                  'text-offset': [0, 1.4],
+                  'text-anchor': 'top',
+                  'text-allow-overlap': true,
+                }}
+                paint={{
+                  'text-color': '#0F172A',
+                  'text-halo-color': '#FFFFFF',
+                  'text-halo-width': 2,
+                }}
+              />
+            </Source>
+
+            <Source id="flights-source" type="geojson" data={emptyGeoJson}>
+              {/* Static Aura Glow */}
+              <Layer
+                id="flight-aura"
+                type="circle"
+                paint={{
+                  'circle-radius': ['case', ['==', ['get', 'isSel'], true], 30, 20],
+                  'circle-color': ['get', 'stateColor'],
+                  'circle-opacity': 0.4,
+                  'circle-blur': 0.8,
+                  'circle-pitch-alignment': 'map',
+                }}
+              />
+
+              {/* Plane Symbol */}
+              <Layer
+                id="flight-points"
+                type="symbol"
+                layout={{
+                  'icon-image': ['get', 'icon'],
+                  'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.6, 1.2],
+                  'icon-rotate': ['get', 'heading'],
+                  'icon-allow-overlap': true,
+                  'icon-rotation-alignment': 'map', // Lay flat on 3D map
+                  'icon-pitch-alignment': 'map',
+                }}
+              />
+              
+              {/* Blinking Beacon Light (Rendered ON TOP of plane) */}
+              <Layer
+                id="flight-glow"
+                type="circle"
+                paint={{
+                  'circle-radius': ['case', ['==', ['get', 'isSel'], true], 5, 4],
+                  'circle-color': ['get', 'typeColor'],
+                  'circle-opacity': blinkTick ? 1.0 : 0.0, // React drives this blink!
+                  'circle-pitch-alignment': 'map',
+                  'circle-stroke-width': 2,
+                  'circle-stroke-color': ['get', 'stateColor'],
+                  'circle-stroke-opacity': blinkTick ? 1.0 : 0.0,
+                }}
+              />
+              {/* Labels */}
+              <Layer
+                id="flight-labels"
+                type="symbol"
+                layout={{
+                  'text-field': ['get', 'callsign'],
+                  'text-font': ['Open Sans Regular'],
+                  'text-size': 11,
+                  'text-offset': [0, 1.5],
+                  'text-anchor': 'top',
+                  'text-allow-overlap': false,
+                }}
+                paint={{
+                  'text-color': '#0F172A',
+                  'text-halo-color': '#FFFFFF',
+                  'text-halo-width': 2,
+                }}
+              />
+            </Source>
+          </>
         )}
       </MapGL>
+
 
       {/* Avionics Tactical HUD Overlay */}
       {isChaseMode && selectedFlight && (

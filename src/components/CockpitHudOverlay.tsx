@@ -25,8 +25,19 @@ export default function CockpitHudOverlay({ flight, onExitChase }: CockpitHudOve
     return { offset, angle: ang, label };
   });
 
+  // Listen for Escape key to exit chase mode
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onExitChase();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onExitChase]);
+
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 select-none overflow-hidden z-20">
+    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 select-none overflow-hidden z-40">
       
       {/* ─── Top Bar: Lock Status & Compass Tape & Exit Button ─── */}
       <div className="flex items-start justify-between gap-2">
@@ -59,15 +70,15 @@ export default function CockpitHudOverlay({ flight, onExitChase }: CockpitHudOve
           <div className="w-2 h-1 bg-cyan mt-0.5" />
         </div>
 
-        {/* Exit Chase Mode Button (Touch Target >= 48px) */}
+        {/* Prominent High-Contrast Exit Chase Mode Button */}
         <button
           type="button"
           onClick={onExitChase}
           aria-label="Exit Cockpit Chase Mode"
-          className="pointer-events-auto min-h-[44px] min-w-[110px] px-4 py-2 bg-[#ff003c]/20 hover:bg-[#ff003c]/30 text-[#ff4d6d] hover:text-white border border-[#ff003c]/50 rounded-xl font-mono text-xs font-black tracking-widest flex items-center justify-center gap-2 transition-all duration-150 shadow-lg active:scale-95"
+          className="pointer-events-auto z-50 min-h-[46px] px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white border-2 border-red-300 rounded-xl font-mono text-xs font-black tracking-widest flex items-center justify-center gap-2 transition-all duration-150 shadow-[0_0_20px_rgba(220,38,38,0.7)] cursor-pointer"
         >
-          <span>✕</span>
-          <span>EXIT CHASE</span>
+          <span className="text-sm">✕</span>
+          <span>EXIT CHASE (ESC)</span>
         </button>
       </div>
 

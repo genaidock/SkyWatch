@@ -75,13 +75,20 @@ function flightReducer(state, action) {
       return { ...state, flights: Array.from(mergedMap.values()) };
     }
     case 'SET_SELECTED_FLIGHT':
-      return { ...state, selectedFlight: action.payload };
+      return {
+        ...state,
+        selectedFlight: action.payload,
+        // If switching to a different plane or clearing selection, exit chase mode
+        isChaseMode: (action.payload && action.payload.id === state.selectedFlight?.id) ? state.isChaseMode : false,
+      };
     case 'SET_LOCATION':
       return {
         ...state,
         userLat: action.payload.lat,
         userLon: action.payload.lon,
         locationLabel: action.payload.label,
+        isChaseMode: false,
+        selectedFlight: null,
         recenterTrigger: state.recenterTrigger + 1,
         viewport: {
           centerLat: action.payload.lat,
@@ -93,6 +100,8 @@ function flightReducer(state, action) {
     case 'TRIGGER_RECENTER':
       return {
         ...state,
+        isChaseMode: false,
+        selectedFlight: null,
         recenterTrigger: state.recenterTrigger + 1,
         viewport: {
           centerLat: state.userLat,

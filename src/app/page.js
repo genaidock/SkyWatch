@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <div className="relative flex flex-col h-[100dvh] bg-bg text-text">
-      <div className={`flex flex-col flex-1 overflow-hidden ${currentScreen === 'radar' ? '' : 'hidden pb-24'}`}>
+      <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'radar' ? '' : 'hidden'}`}>
         <RadarScreen onShowToast={showToastMessage} onLocationClick={() => setShowLocationModal(true)} onSelectFlight={openFlightDetail} />
       </div>
       <div className={`flex flex-col flex-1 overflow-hidden pb-24 ${currentScreen === 'flights' ? '' : 'hidden'}`}>

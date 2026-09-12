@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import MapGL, { Source, Layer, Marker, useMap } from 'react-map-gl/maplibre';
 import * as SunCalc from 'suncalc';
 import CockpitHudOverlay from './CockpitHudOverlay';
-import { haversine, calculateGreatCircleRoute } from '../lib/utils';
+import { haversine, calculateGreatCircleRoute, ALL_AIRPORTS } from '../lib/utils';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // SVG without glow filter for crisp display, perfectly centered in 48x48
@@ -385,7 +385,23 @@ export default function MapLibreRadar({
   // Initial empty source (will be instantly overwritten by RAF loop)
   const emptyGeoJson = useMemo(() => ({ type: 'FeatureCollection' as const, features: [] }), []);
 
-  // Fly to new location when user changes location via dropdown
+  // Pre-compute airports GeoJSON for navigational waypoint beacons
+  const airportsGeoJson = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: ALL_AIRPORTS.map(a => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [a.lon, a.lat],
+      },
+      properties: {
+        code: a.code,
+        name: a.name,
+      },
+    })),
+  }), []);
+
+  // Fly to new location when user changes location via dropdown or clicks HOME
   useEffect(() => {
     if (mapRef.current && userLat !== null && userLon !== null) {
       let targetZoom = 9;
@@ -398,7 +414,9 @@ export default function MapLibreRadar({
       mapRef.current.flyTo({
         center: [userLon, userLat],
         zoom: targetZoom,
-        duration: 1500, // 1.5 seconds smooth fly animation
+        pitch: 60,
+        bearing: 0,
+        duration: 1200,
         essential: true
       });
     }
@@ -480,10 +498,14 @@ export default function MapLibreRadar({
           if (e.features && e.features.length > 0) {
             const clickedFlight = flights.find(f => f.id === e.features[0].properties.id);
             if (clickedFlight) {
+              if (isChaseMode && selectedFlight?.id !== clickedFlight.id) {
+                onExitChase?.();
+              }
               onSelectFlight(clickedFlight);
               return;
             }
           }
+          if (isChaseMode) onExitChase?.();
           onSelectFlight(null);
         }}
         interactiveLayerIds={['flight-points', 'flight-glow']}
@@ -504,8 +526,61 @@ export default function MapLibreRadar({
           }}
         />
 
+        {/* Origin Base Station Indicator */}
+        {userLat !== null && userLon !== null && (
+          <Marker longitude={userLon} latitude={userLat}>
+            <div className="flex flex-col items-center justify-center pointer-events-none">
+              <div className="w-4 h-4 rounded-full border flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.8)] bg-black/20 border-black/50">
+                <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
+              </div>
+              <div className="text-[10px] font-mono mt-0.5 text-black/80 font-bold bg-white/70 px-1 rounded shadow-sm">ORG</div>
+            </div>
+          </Marker>
+        )}
+
         {iconsLoaded && (
           <>
+            {/* ─── Nearby Airport Beacons ─── */}
+            <Source id="airports-source" type="geojson" data={airportsGeoJson}>
+              <Layer
+                id="airports-glow"
+                type="circle"
+                paint={{
+                  'circle-radius': 7,
+                  'circle-color': '#facc15',
+                  'circle-opacity': 0.25,
+                  'circle-blur': 0.6,
+                }}
+              />
+              <Layer
+                id="airports-beacon"
+                type="circle"
+                paint={{
+                  'circle-radius': 3.5,
+                  'circle-color': '#facc15',
+                  'circle-stroke-width': 1.5,
+                  'circle-stroke-color': '#0F172A',
+                }}
+              />
+              <Layer
+                id="airports-labels"
+                type="symbol"
+                layout={{
+                  'text-field': ['get', 'code'],
+                  'text-font': ['Open Sans Regular'],
+                  'text-size': 10,
+                  'text-offset': [0, 1.2],
+                  'text-anchor': 'top',
+                  'text-allow-overlap': false,
+                }}
+                paint={{
+                  'text-color': '#0F172A',
+                  'text-halo-color': '#FFFFFF',
+                  'text-halo-width': 2,
+                }}
+              />
+            </Source>
+
             {/* ─── Selected Flight Breadcrumb Trail ─── */}
             <Source id="flight-trail-source" type="geojson" data={emptyGeoJson}>
               <Layer

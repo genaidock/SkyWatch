@@ -34,6 +34,8 @@ const initialState = {
     military: true,
     helicopter: true,
   },
+  sensorMode: 'normal' as 'normal' | 'nvg' | 'flir' | 'crt',
+  isChaseMode: false,
 };
 
 function flightReducer(state, action) {
@@ -114,6 +116,10 @@ function flightReducer(state, action) {
       };
     case 'SET_PLANE_TYPE_FILTER':
       return { ...state, planeTypeFilter: action.payload };
+    case 'SET_SENSOR_MODE':
+      return { ...state, sensorMode: action.payload };
+    case 'SET_CHASE_MODE':
+      return { ...state, isChaseMode: action.payload };
     default:
       return state;
   }
@@ -141,6 +147,11 @@ export function FlightProvider({ children }) {
       const savedPlaneFilter = localStorage.getItem('skywatch_planefilter');
       if (savedPlaneFilter) {
         dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: JSON.parse(savedPlaneFilter) });
+      }
+
+      const savedSensorMode = localStorage.getItem('skywatch_sensormode');
+      if (savedSensorMode && ['normal', 'nvg', 'flir', 'crt'].includes(savedSensorMode)) {
+        dispatch({ type: 'SET_SENSOR_MODE', payload: savedSensorMode });
       }
     } catch (e) { /* ignore */ }
   }, []);
@@ -264,6 +275,15 @@ export function FlightProvider({ children }) {
   const setPlaneTypeFilter = useCallback((filter) => {
     dispatch({ type: 'SET_PLANE_TYPE_FILTER', payload: filter });
     try { localStorage.setItem('skywatch_planefilter', JSON.stringify(filter)); } catch (e) { /* ignore */ }
+  }, []);
+
+  const setSensorMode = useCallback((mode: 'normal' | 'nvg' | 'flir' | 'crt') => {
+    try { localStorage.setItem('skywatch_sensormode', mode); } catch (e) { /* ignore */ }
+    dispatch({ type: 'SET_SENSOR_MODE', payload: mode });
+  }, []);
+
+  const setChaseMode = useCallback((active: boolean) => {
+    dispatch({ type: 'SET_CHASE_MODE', payload: active });
   }, []);
 
   const updateGlobalSettings = useCallback(async (newSettings, password) => {
@@ -487,6 +507,8 @@ export function FlightProvider({ children }) {
     updateGlobalSettings,
     trailsRef,
     setPlaneTypeFilter,
+    setSensorMode,
+    setChaseMode,
   };
 
   return (

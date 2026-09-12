@@ -16,7 +16,7 @@ function DetailItem({ label, value }) {
 }
 
 export default function DetailScreen({ onBack }) {
-  const { state, setSelectedFlight } = useFlightContext();
+  const { state, setSelectedFlight, setChaseMode } = useFlightContext();
   const f = state.selectedFlight;
 
   const [acDetails, setAcDetails] = useState(null);
@@ -97,17 +97,41 @@ export default function DetailScreen({ onBack }) {
     <div className="flex flex-col flex-1 overflow-hidden bg-bg">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral flex-shrink-0 bg-surface shadow-sm">
         <button
+          type="button"
           onClick={() => {
             onBack?.();
           }}
-          className="text-2xl text-tdim hover:text-text cursor-pointer transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-2xl text-tdim hover:text-text cursor-pointer transition-colors"
+          aria-label="Back to radar screen"
         >
           ‹
         </button>
-        <div className="font-mono font-black text-2xl text-text tracking-widest flex-1">
-          {f.callsign}
+        <div className="flex flex-col flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-black text-2xl text-text tracking-widest">
+              {f.callsign}
+            </span>
+            {f.category === 'military' && (
+              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono rounded-md font-bold">
+                {f.branch || 'MILITARY'}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="w-2 h-2 rounded-full bg-cargo shadow-sm shadow-cargo/50 glow-animation"></div>
+
+        {/* 3D Cockpit Chase Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setChaseMode(true);
+            onBack?.();
+          }}
+          className="min-h-[44px] px-3.5 py-1.5 bg-cyan text-black hover:bg-cyan/90 active:scale-95 rounded-xl font-mono text-xs font-black tracking-wider flex items-center gap-1.5 shadow-md shadow-cyan/20 transition-all cursor-pointer"
+          aria-label="Engage 3D Chase mode"
+        >
+          <span>🚀</span>
+          <span>CHASE 3D</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">

@@ -60,3 +60,43 @@ body {
   background: rgba(226, 232, 240, 0.18);
   border-radius: 4px;
 }
+
+/* Tactical Sensor Vision Modes */
+.sensor-nvg {
+  filter: brightness(0.95) contrast(1.45) saturate(2.2) hue-rotate(85deg);
+}
+
+.sensor-flir {
+  filter: invert(0.92) hue-rotate(180deg) contrast(1.35) saturate(2.2);
+}
+
+.sensor-crt {
+  filter: sepia(0.5) hue-rotate(135deg) contrast(1.25) brightness(1.05);
+}
+
+/* CRT & Tactical Scanline Overlay */
+.scanlines-overlay {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Tactical Vignette */
+.vignette-overlay {
+  background: radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+/* Avionics Pitch Ladder Chevrons */
+.pitch-ladder-mark {
+  border-top: 1.5px solid rgba(0, 229, 255, 0.8);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+}

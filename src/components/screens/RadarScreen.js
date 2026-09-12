@@ -8,9 +8,10 @@ import LocationBar from '@/components/LocationBar';
 import ApiStatus from '@/components/ApiStatus';
 import MapLibreRadar from '@/components/MapLibreRadar';
 import FlightCards from '@/components/FlightCards';
+import SensorModeSelector from '@/components/SensorModeSelector';
 
 export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlight }) {
-  const { state, trailsRef, recenterLocation } = useFlightContext();
+  const { state, trailsRef, recenterLocation, setSensorMode, setChaseMode } = useFlightContext();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -40,7 +41,9 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
 
         {/* ─── Radar + Map container ─── */}
         <div
-          className="radar-map-container relative w-full h-[55vh] min-h-[400px] flex-shrink-0 touch-none select-none overflow-hidden bg-neutral/20 border-b border-cyan/20 shadow-sm"
+          className={`radar-map-container relative w-full h-[55vh] min-h-[400px] flex-shrink-0 touch-none select-none overflow-hidden bg-neutral/20 border-b border-cyan/20 shadow-sm ${
+            state.sensorMode && state.sensorMode !== 'normal' ? `sensor-${state.sensorMode}` : ''
+          }`}
         >
           {state.userLat === null ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-sm z-50">
@@ -57,7 +60,38 @@ export default function RadarScreen({ onShowToast, onLocationClick, onSelectFlig
                 radius={state.radius}
                 recenterTrigger={state.recenterTrigger}
                 onSelectFlight={onSelectFlight}
+                isChaseMode={state.isChaseMode}
+                onExitChase={() => setChaseMode(false)}
               />
+
+              {/* Floating Tactical Sensor Vision Selector */}
+              <div className="absolute top-2.5 right-2.5 z-10">
+                <SensorModeSelector
+                  currentMode={state.sensorMode || 'normal'}
+                  onSelectMode={(mode) => setSensorMode(mode)}
+                />
+              </div>
+
+              {/* Floating 3D Chase Trigger Button when flight selected */}
+              {state.selectedFlight && !state.isChaseMode && (
+                <button
+                  type="button"
+                  onClick={() => setChaseMode(true)}
+                  className="absolute bottom-3 right-3 z-10 min-h-[44px] px-3.5 py-2 bg-cyan/90 hover:bg-cyan active:scale-95 text-black font-mono text-xs font-black rounded-xl shadow-xl flex items-center gap-2 border border-cyan transition-all duration-150"
+                  aria-label={`Chase ${state.selectedFlight.callsign} in 3D`}
+                >
+                  <span className="text-sm">🚀</span>
+                  <span>CHASE 3D</span>
+                </button>
+              )}
+
+              {/* Tactical Scanlines / Vignette Filter Overlays */}
+              {(state.sensorMode === 'nvg' || state.sensorMode === 'crt') && (
+                <div className="absolute inset-0 scanlines-overlay pointer-events-none z-10" />
+              )}
+              {(state.sensorMode === 'flir' || state.sensorMode === 'nvg') && (
+                <div className="absolute inset-0 vignette-overlay pointer-events-none z-10" />
+              )}
             </>
           )}
         </div>

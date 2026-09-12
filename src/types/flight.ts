@@ -3,6 +3,16 @@ export interface Airport {
   city: string;
 }
 
+export type SensorMode = 'normal' | 'nvg' | 'flir' | 'crt';
+
+export interface ChaseCameraState {
+  active: boolean;
+  targetFlightId: string | null;
+  pitch: number;
+  bearing: number;
+  zoom: number;
+}
+
 export interface Flight {
   id: string;
   callsign: string;
@@ -21,16 +31,26 @@ export interface Flight {
   type: string;
   desc?: string;
   category?: 'civil' | 'cargo' | 'military' | 'private' | 'helicopter' | null;
+  branch?: string;
+  isMilitary?: boolean;
   distKm: number;
   from: Airport;
   to: Airport;
   progress: number;
   firstSeen: Date;
   source: string;
+  sources?: string[];
   isHeli?: boolean;
+  isDemo?: boolean;
   lastUpdated?: number;
-  // Used for interpolation in the canvas
+  // Used for interpolation in the canvas / MapLibre
   prevLat?: number;
   prevLon?: number;
   prevHeading?: number;
+  airlineObj?: {
+    name: string;
+    icao?: string;
+    iata?: string;
+    callsign?: string;
+  };
 }

@@ -1,5 +1,6 @@
 // Flight data fetching logic for different APIs
 import { haversine, getNearbyAirports, getAirportName } from './utils';
+import { identifyMilitaryFlight } from './militaryRegistry';
 
 const ROUTE_CACHE = {};
 const ROUTE_FETCH_ATTEMPTS = {};
@@ -296,10 +297,25 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     })
   );
 
-  const flights = sourceResults
+  let flights = sourceResults
     .filter(r => r.status === 'fulfilled')
     .flatMap(r => (r as any).value)
     .filter(Boolean);
+
+  // Resilient direct fallback: if proxy or primary APIs returned 0, query adsb.lol directly
+  if (flights.length === 0) {
+    try {
+      const directUrl = `https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`;
+      const directRes = await fetchWithTimeout(directUrl, 6000);
+      if (directRes.ok) {
+        const directData = await directRes.json();
+        const fallbackFlights = parseADSBLol(directData, userLat, userLon, radiusKm, 'ADS-B.lol (Direct)');
+        flights = fallbackFlights;
+      }
+    } catch (e) {
+      console.warn('Direct adsb.lol fallback failed:', e);
+    }
+  }
 
   return uniqueFlights(flights);
 }
@@ -346,13 +362,16 @@ export function uniqueFlights(flights) {
     const type = (f.type || '').toUpperCase();
     const callsign = (f.callsign || '').toUpperCase();
     
-    // Cargo planes (FedEx, UPS, Atlas Air, Polar, ABX, Omni, Kalitta, Cargolux, Southern Air, Nippon Cargo, Polar Air)
-    if (/freighter|cargo/.test(desc) || /^(FDX|UPS|GTI|PAC|ABX|OAE|CKS|CLX|SOO|NCA|PO)/.test(callsign)) {
-      category = 'cargo';
-    } 
-    // Military planes
-    else if (/military|air force|navy|army|coast guard|nato/.test(desc) || /^(F16|F35|C17$|C17A|C130|EUFI|B52|E3TF|KC13)/.test(type) || /^(RCH|RFR|CNV)/.test(callsign)) {
+    // Check military identification registry (ICAO hex, callsign prefixes, airframe, description)
+    const militaryCheck = identifyMilitaryFlight(f.icao24, f.callsign, f.type, f.desc);
+    if (militaryCheck.isMilitary) {
       category = 'military';
+      f.isMilitary = true;
+      f.branch = militaryCheck.branch;
+    }
+    // Cargo planes (FedEx, UPS, Atlas Air, Polar, ABX, Omni, Kalitta, Cargolux, Southern Air, Nippon Cargo, Polar Air)
+    else if (/freighter|cargo/.test(desc) || /^(FDX|UPS|GTI|PAC|ABX|OAE|CKS|CLX|SOO|NCA|PO)/.test(callsign)) {
+      category = 'cargo';
     } 
     // Private jets
     else if (/gulfstream|challenger|citation|falcon|learjet|legacy/.test(desc) || /^(GLF|C56|CL3|F2TH|E55|E50|H25B|FA7X|FA8X)/.test(type)) {

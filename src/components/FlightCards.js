@@ -41,7 +41,14 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
             style={{ animationDelay: `${i * 0.05}s` }}
           >
             <div className="flex items-center justify-between mb-3">
-              <div className="font-display font-black tracking-wide text-lg text-slate-900">{f.callsign || 'UNKNOWN'}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-display font-black tracking-wide text-lg text-slate-900">{f.callsign || 'UNKNOWN'}</div>
+                {f.category === 'military' && (
+                  <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-mono rounded font-bold">
+                    {f.branch || 'MIL'}
+                  </span>
+                )}
+              </div>
               <div className="text-xs font-display font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
                 {Number(f.distKm || 0).toFixed(1)} km
               </div>

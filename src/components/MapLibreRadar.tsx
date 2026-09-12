@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import MapGL, { Source, Layer, Marker, useMap } from 'react-map-gl/maplibre';
 import * as SunCalc from 'suncalc';
+import CockpitHudOverlay from './CockpitHudOverlay';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // SVG without glow filter for crisp display, perfectly centered in 48x48
@@ -30,7 +31,27 @@ const ICONS = {
   'heli-black': HELI_SVG.replace(/COLOR/g, '#000000'),
 };
 
-export default function MapLibreRadar({ flights, selectedFlight, userLat, userLon, radius, recenterTrigger, onSelectFlight }) {
+export default function MapLibreRadar({
+  flights,
+  selectedFlight,
+  userLat,
+  userLon,
+  radius,
+  recenterTrigger,
+  onSelectFlight,
+  isChaseMode = false,
+  onExitChase = () => {},
+}: {
+  flights: any[];
+  selectedFlight: any;
+  userLat: number | null;
+  userLon: number | null;
+  radius: number;
+  recenterTrigger?: number;
+  onSelectFlight: (flight: any) => void;
+  isChaseMode?: boolean;
+  onExitChase?: () => void;
+}) {
   const [iconsLoaded, setIconsLoaded] = useState(false);
   const [blinkTick, setBlinkTick] = useState(true);
   
@@ -194,6 +215,18 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
 
           // Inject directly into MapLibre (Bypasses React rendering entirely!)
           source.setData(geoJson);
+
+          // 3. Dynamic Cockpit Chase Camera Tethering (60 FPS)
+          if (isChaseMode && selectedFlight) {
+            const chased = activeFlightsRef.current.find(f => f.id === selectedFlight.id);
+            if (chased && chased.lat != null && chased.lon != null) {
+              map.jumpTo({
+                center: [chased.lon, chased.lat],
+                pitch: 65,
+                bearing: chased.heading || 0,
+              });
+            }
+          }
         }
       }
 
@@ -205,7 +238,7 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [iconsLoaded, selectedFlight]); // re-bind when selectedFlight changes so colors update correctly
+  }, [iconsLoaded, selectedFlight, isChaseMode]); // re-bind when selectedFlight or chase mode changes
 
 
   // Initial empty source (will be instantly overwritten by RAF loop)
@@ -229,6 +262,30 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
       });
     }
   }, [userLat, userLon, radius, recenterTrigger]);
+
+  // Smoothly transition camera when entering or exiting Cockpit Chase mode
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (isChaseMode && selectedFlight) {
+      const f = activeFlightsRef.current.find(fl => fl.id === selectedFlight.id) || selectedFlight;
+      if (f && f.lat != null && f.lon != null) {
+        mapRef.current.flyTo({
+          center: [f.lon, f.lat],
+          zoom: 14,
+          pitch: 65,
+          bearing: f.heading || 0,
+          duration: 1200,
+          essential: true,
+        });
+      }
+    } else if (!isChaseMode && userLat !== null && userLon !== null) {
+      mapRef.current.easeTo({
+        pitch: 60,
+        bearing: 0,
+        duration: 800,
+      });
+    }
+  }, [isChaseMode, selectedFlight?.id]);
 
   // Load custom SVG images into MapLibre on load
   const onMapLoad = useCallback((e) => {
@@ -264,117 +321,124 @@ export default function MapLibreRadar({ flights, selectedFlight, userLat, userLo
   else initialZoom = 7; // For 250km
 
   return (
-    <MapGL
-      ref={mapRef}
-      initialViewState={{
-        longitude: userLon || 0,
-        latitude: userLat || 0,
-        zoom: initialZoom,
-        pitch: 60, // Dramatic 3D tilt
-      }}
-      mapStyle={mapStyleUrl}
-      style={{ width: '100%', height: '100%' }}
-      interactive={true}
-      onLoad={onMapLoad}
-      onClick={(e) => {
-        if (e.features && e.features.length > 0) {
-          const clickedFlight = flights.find(f => f.id === e.features[0].properties.id);
-          if (clickedFlight) {
-            onSelectFlight(clickedFlight);
-            return;
-          }
-        }
-        onSelectFlight(null);
-      }}
-      interactiveLayerIds={['flight-points', 'flight-glow']}
-      cursor="crosshair"
-    >
-      {/* 3D Buildings Layer */}
-      <Layer
-        id="3d-buildings"
-        source="carto"
-        source-layer="building"
-        type="fill-extrusion"
-        minzoom={14}
-        paint={{
-          'fill-extrusion-color': '#E2E8F0',
-          'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 20],
-          'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
-          'fill-extrusion-opacity': 0.7
+    <div className="relative w-full h-full">
+      <MapGL
+        ref={mapRef}
+        initialViewState={{
+          longitude: userLon || 0,
+          latitude: userLat || 0,
+          zoom: initialZoom,
+          pitch: 60, // Dramatic 3D tilt
         }}
-      />
-      <Marker longitude={userLon} latitude={userLat}>
-        <div className="flex flex-col items-center justify-center">
-          <div className="w-4 h-4 rounded-full border flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.8)] bg-black/20 border-black/50">
-            <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
+        mapStyle={mapStyleUrl}
+        style={{ width: '100%', height: '100%' }}
+        interactive={true}
+        onLoad={onMapLoad}
+        onClick={(e) => {
+          if (e.features && e.features.length > 0) {
+            const clickedFlight = flights.find(f => f.id === e.features[0].properties.id);
+            if (clickedFlight) {
+              onSelectFlight(clickedFlight);
+              return;
+            }
+          }
+          onSelectFlight(null);
+        }}
+        interactiveLayerIds={['flight-points', 'flight-glow']}
+        cursor="crosshair"
+      >
+        {/* 3D Buildings Layer */}
+        <Layer
+          id="3d-buildings"
+          source="carto"
+          source-layer="building"
+          type="fill-extrusion"
+          minzoom={14}
+          paint={{
+            'fill-extrusion-color': '#E2E8F0',
+            'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 20],
+            'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
+            'fill-extrusion-opacity': 0.7
+          }}
+        />
+        <Marker longitude={userLon} latitude={userLat}>
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-4 h-4 rounded-full border flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.8)] bg-black/20 border-black/50">
+              <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
+            </div>
+            <div className="text-[10px] font-mono mt-1 text-black/70">ORG</div>
           </div>
-          <div className="text-[10px] font-mono mt-1 text-black/70">ORG</div>
-        </div>
-      </Marker>
+        </Marker>
 
-      {iconsLoaded && (
-        <Source id="flights-source" type="geojson" data={emptyGeoJson}>
-          {/* Static Aura Glow */}
-          <Layer
-            id="flight-aura"
-            type="circle"
-            paint={{
-              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 30, 20],
-              'circle-color': ['get', 'stateColor'],
-              'circle-opacity': 0.4,
-              'circle-blur': 0.8,
-              'circle-pitch-alignment': 'map',
-            }}
-          />
+        {iconsLoaded && (
+          <Source id="flights-source" type="geojson" data={emptyGeoJson}>
+            {/* Static Aura Glow */}
+            <Layer
+              id="flight-aura"
+              type="circle"
+              paint={{
+                'circle-radius': ['case', ['==', ['get', 'isSel'], true], 30, 20],
+                'circle-color': ['get', 'stateColor'],
+                'circle-opacity': 0.4,
+                'circle-blur': 0.8,
+                'circle-pitch-alignment': 'map',
+              }}
+            />
 
-          {/* Plane Symbol */}
-          <Layer
-            id="flight-points"
-            type="symbol"
-            layout={{
-              'icon-image': ['get', 'icon'],
-              'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.6, 1.2],
-              'icon-rotate': ['get', 'heading'],
-              'icon-allow-overlap': true,
-              'icon-rotation-alignment': 'map', // Lay flat on 3D map
-              'icon-pitch-alignment': 'map',
-            }}
-          />
-          
-          {/* Blinking Beacon Light (Rendered ON TOP of plane) */}
-          <Layer
-            id="flight-glow"
-            type="circle"
-            paint={{
-              'circle-radius': ['case', ['==', ['get', 'isSel'], true], 5, 4],
-              'circle-color': ['get', 'typeColor'],
-              'circle-opacity': blinkTick ? 1.0 : 0.0, // React drives this blink!
-              'circle-pitch-alignment': 'map',
-              'circle-stroke-width': 2,
-              'circle-stroke-color': ['get', 'stateColor'],
-              'circle-stroke-opacity': blinkTick ? 1.0 : 0.0,
-            }}
-          />
-          {/* Labels */}
-          <Layer
-            id="flight-labels"
-            type="symbol"
-            layout={{
-              'text-field': ['get', 'callsign'],
-              'text-font': ['Open Sans Regular'],
-              'text-size': 11,
-              'text-offset': [0, 1.5],
-              'text-anchor': 'top',
-              'text-allow-overlap': false,
-            }}
-            paint={{
-              'text-color': '#0F172A',
-              'text-halo-color': '#FFFFFF',
-              'text-halo-width': 2,
-            }}
-          />
-        </Source>
+            {/* Plane Symbol */}
+            <Layer
+              id="flight-points"
+              type="symbol"
+              layout={{
+                'icon-image': ['get', 'icon'],
+                'icon-size': ['case', ['==', ['get', 'isSel'], true], 1.6, 1.2],
+                'icon-rotate': ['get', 'heading'],
+                'icon-allow-overlap': true,
+                'icon-rotation-alignment': 'map', // Lay flat on 3D map
+                'icon-pitch-alignment': 'map',
+              }}
+            />
+            
+            {/* Blinking Beacon Light (Rendered ON TOP of plane) */}
+            <Layer
+              id="flight-glow"
+              type="circle"
+              paint={{
+                'circle-radius': ['case', ['==', ['get', 'isSel'], true], 5, 4],
+                'circle-color': ['get', 'typeColor'],
+                'circle-opacity': blinkTick ? 1.0 : 0.0, // React drives this blink!
+                'circle-pitch-alignment': 'map',
+                'circle-stroke-width': 2,
+                'circle-stroke-color': ['get', 'stateColor'],
+                'circle-stroke-opacity': blinkTick ? 1.0 : 0.0,
+              }}
+            />
+            {/* Labels */}
+            <Layer
+              id="flight-labels"
+              type="symbol"
+              layout={{
+                'text-field': ['get', 'callsign'],
+                'text-font': ['Open Sans Regular'],
+                'text-size': 11,
+                'text-offset': [0, 1.5],
+                'text-anchor': 'top',
+                'text-allow-overlap': false,
+              }}
+              paint={{
+                'text-color': '#0F172A',
+                'text-halo-color': '#FFFFFF',
+                'text-halo-width': 2,
+              }}
+            />
+          </Source>
+        )}
+      </MapGL>
+
+      {/* Avionics Tactical HUD Overlay */}
+      {isChaseMode && selectedFlight && (
+        <CockpitHudOverlay flight={selectedFlight} onExitChase={onExitChase} />
       )}
-    </MapGL>
+    </div>
   );
 }

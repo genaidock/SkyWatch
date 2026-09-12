@@ -1,6 +1,6 @@
 {
   "name": "skywatch-nextjs",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Live Flight Radar - Next.js Edition",
   "scripts": {
     "dev": "next dev",

@@ -28,7 +28,7 @@ async function fetchWithTimeout(url, ms = FETCH_TIMEOUT, customHeaders = {}) {
       signal: controller.signal, 
       redirect: 'error',
       headers: {
-        'User-Agent': 'SkyWatch/6.0 (genaidock.com; flight-tracker)',
+        'User-Agent': 'SkyWatch/7.0 (genaidock.com; flight-tracker)',
         'Accept': 'application/json',
         ...customHeaders
       }
@@ -107,7 +107,7 @@ export async function GET(request) {
   const radiusKm = Math.max(10, radius);
   const latF = lat.toFixed(4);
   const lonF = lon.toFixed(4);
-  const distNm = Math.max(10, Math.ceil(radiusKm * 1.2 * 0.621371));
+  const distNm = Math.max(10, Math.min(250, Math.ceil(radiusKm * 1.2 * 0.621371)));
 
   const deg = radiusKm / 111;
   const cosLat = Math.cos(lat * Math.PI / 180);

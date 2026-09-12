@@ -1,14 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import Header from '@/components/Header';
 import { useFlightContext } from '@/context/FlightContext';
 
 export default function SettingsScreen({ onShowToast }) {
-  const { state, setApiKey, setEnabledAPIs, setRadius, updateGlobalSettings, setPlaneTypeFilter } = useFlightContext();
-  const [adminPassword, setAdminPassword] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const { state, setEnabledAPIs, setPlaneTypeFilter, setSensorMode } = useFlightContext();
 
   const toggleApi = (key) => {
     const isCurrentlyEnabled = state.enabledAPIs[key];
@@ -23,227 +19,153 @@ export default function SettingsScreen({ onShowToast }) {
       ...state.enabledAPIs,
       [key]: !isCurrentlyEnabled,
     });
-    onShowToast(`${key} ${isCurrentlyEnabled ? 'disabled' : 'enabled'}`);
+    onShowToast(`${key.toUpperCase()} ${isCurrentlyEnabled ? 'disabled' : 'enabled'}`);
   };
 
-  const handleAdminSave = async () => {
-    setIsSaving(true);
-    try {
-      await updateGlobalSettings({
-        radius: state.radius,
-        refreshInterval: state.refreshInterval,
-        enabledAPIs: state.enabledAPIs,
-        apiKeys: state.apiKeys,
-      }, adminPassword);
-      onShowToast('Global settings updated successfully!');
-      setShowPasswordModal(false);
-      setAdminPassword('');
-    } catch (err) {
-      onShowToast(err.message || 'Failed to update global settings');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-
+  const sensorModes = [
+    { id: 'normal', name: 'Standard Radar', desc: 'Tactical cyan neon display with high contrast', color: '#00e5ff' },
+    { id: 'crt', name: 'Amber CRT', desc: 'Vintage amber phosphor radar terminal with scanlines', color: '#ffaa00' },
+    { id: 'nvg', name: 'Night Vision (NVG)', desc: 'Military Gen-3 green phosphor with peripheral vignette', color: '#00ff66' },
+    { id: 'flir', name: 'FLIR Thermal', desc: 'Thermal infrared white-hot sensor mode', color: '#ffffff' },
+  ];
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <Header title="SETTINGS" subtitle="PREFERENCES & ACCOUNT" />
+      <Header title="SETTINGS" subtitle="PREFERENCES & SENSORS" />
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
-        {/* Location Section */}
-        <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">📍 LOCATION</div>
-          <button className="w-full bg-surface border border-neutral rounded-xl p-3 hover:bg-neutral/50 transition-colors text-left shadow-sm">
-            <div className="text-sm text-text font-bold">Set Location</div>
-            <div className="text-xs text-tdim mt-1">{state.locationLabel}</div>
-          </button>
-        </div>
 
-        {/* Radar Section */}
+        {/* Tactical Sensor Vision Modes */}
         <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛰 RADAR</div>
-          <div className="space-y-2">
-            <div className="bg-surface border border-neutral rounded-xl p-3 shadow-sm">
-              <div className="text-sm text-text mb-2 font-bold">Scan Radius</div>
-              <div className="flex gap-2">
-                {[10, 25, 50, 100].map(r => (
-                  <button
-                    key={r}
-                    onClick={() => setRadius(r)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-mono transition-colors shadow-sm ${state.radius === r ? 'bg-cyan text-white font-bold' : 'bg-surface text-text border border-neutral hover:bg-neutral/50'}`}
-                  >
-                    {r}km
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* API Source Toggles */}
-        <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔌 DATA SOURCES</div>
-          <div className="space-y-3">
-            {[
-              { key: 'adsblol', label: 'ADS-B.lol', desc: 'Open Community ADS-B Feed (Real-time)' },
-              { key: 'opensky', label: 'OpenSky Network', desc: 'Global Academic & Crowdsourced Network' },
-              { key: 'airlabs', label: 'AirLabs.co', desc: 'Commercial Aviation API (Requires API Key)' },
-            ].map(api => (
-              <div key={api.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">
-                <div>
-                  <div className="font-mono text-sm text-text font-bold">{api.label}</div>
-                  <div className="text-xs text-tdim mt-0.5">{api.desc}</div>
-                  <div className="text-xs font-mono text-tdim mt-1">
-                    Status: <span className={state.enabledAPIs?.[api.key] ? 'text-cargo font-bold' : 'text-tdim'}>{state.enabledAPIs?.[api.key] ? 'Enabled' : 'Disabled'}</span>
-                  </div>
-                </div>
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">👁️ TACTICAL SENSOR VISION</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {sensorModes.map(mode => {
+              const isActive = (state.sensorMode || 'normal') === mode.id;
+              return (
                 <button
-                  onClick={() => toggleApi(api.key)}
-                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.enabledAPIs?.[api.key] ? 'bg-cargo border border-cargo text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
+                  key={mode.id}
+                  type="button"
+                  onClick={() => {
+                    setSensorMode(mode.id);
+                    onShowToast(`Sensor mode: ${mode.name}`);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    isActive
+                      ? 'bg-surface border-cyan shadow-lg shadow-cyan/15 ring-1 ring-cyan'
+                      : 'bg-surface/60 border-neutral/60 hover:bg-neutral/40'
+                  }`}
                 >
-                  {state.enabledAPIs?.[api.key] ? 'ON' : 'OFF'}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: mode.color }} />
+                      <span className="font-mono text-sm font-bold text-text">{mode.name}</span>
+                    </div>
+                    {isActive && (
+                      <span className="text-[10px] font-mono font-bold text-cyan bg-cyan/15 px-1.5 py-0.5 rounded border border-cyan/30">
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-tdim leading-relaxed">{mode.desc}</div>
                 </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-
-
 
         {/* Aircraft Types */}
         <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">✈️ AIRCRAFT TYPES</div>
-          <div className="space-y-3">
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">✈️ AIRCRAFT RADAR FILTERS</div>
+          <div className="space-y-2.5">
             {[
-              { key: 'civil', label: 'Civilian / Commercial' },
-              { key: 'cargo', label: 'Cargo Freighters' },
-              { key: 'private', label: 'Private / VIP' },
-              { key: 'military', label: 'Military' },
-              { key: 'helicopter', label: 'Helicopters' },
-            ].map(type => (
-              <div key={type.key} className="bg-surface border border-neutral rounded-xl p-3 flex items-center justify-between shadow-sm">
-                <div>
-                  <div className="font-mono text-sm text-text font-bold">{type.label}</div>
-                  <div className="text-xs text-tdim mt-1">{state.planeTypeFilter?.[type.key] !== false ? 'Visible' : 'Hidden'}</div>
+              { key: 'civil', label: 'Civilian / Commercial', color: '#00e5ff' },
+              { key: 'cargo', label: 'Cargo Freighters', color: '#00ff9d' },
+              { key: 'private', label: 'Private / VIP Executive', color: '#8a2be2' },
+              { key: 'military', label: 'Military Aircraft', color: '#ff003c' },
+              { key: 'helicopter', label: 'Rotorcraft / Helicopters', color: '#39ff14' },
+            ].map(type => {
+              const isVisible = state.planeTypeFilter?.[type.key] !== false;
+              return (
+                <div key={type.key} className="bg-surface border border-neutral/60 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: type.color }} />
+                    <div>
+                      <div className="font-mono text-sm text-text font-bold">{type.label}</div>
+                      <div className="text-xs text-tdim">{isVisible ? 'Visible on radar' : 'Hidden from radar'}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPlaneTypeFilter({ ...state.planeTypeFilter, [type.key]: !isVisible })}
+                    className={`px-3 py-1.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                      isVisible
+                        ? 'bg-cyan border border-cyan text-white hover:opacity-90'
+                        : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'
+                    }`}
+                  >
+                    {isVisible ? 'SHOWN' : 'HIDDEN'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => setPlaneTypeFilter({ ...state.planeTypeFilter, [type.key]: state.planeTypeFilter?.[type.key] === false ? true : false })}
-                  className={`px-3 py-2 rounded-full font-mono text-xs font-bold transition-colors shadow-sm ${state.planeTypeFilter?.[type.key] !== false ? 'bg-cyan border border-cyan text-white hover:opacity-80' : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'}`}
-                >
-                  {state.planeTypeFilter?.[type.key] !== false ? 'SHOW' : 'HIDE'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* API Keys */}
+        {/* Live Data Sources */}
         <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔑 API KEYS</div>
-          <div className="space-y-3">
-            <div className="bg-surface border border-neutral rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-mono text-sm text-cyan tracking-wider font-bold">⭐ AIRLABS.CO</div>
-                {state.apiKeysConfigured?.airLabs && (
-                  <span className="text-xs text-cargo font-mono font-bold">✓ Configured</span>
-                )}
-              </div>
-              <input
-                type="password"
-                placeholder="Enter new key (or leave blank to keep current)"
-                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2 shadow-sm"
-                value={state.apiKeys.airLabs}
-                onChange={(e) => setApiKey('airLabs', e.target.value)}
-              />
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🔌 RADAR DATA FEEDS</div>
+          <div className="space-y-2.5">
+            {[
+              { key: 'adsblol', label: 'ADS-B.lol', desc: 'Real-time open community ADS-B feeder network' },
+              { key: 'opensky', label: 'OpenSky Network', desc: 'Global academic and crowdsourced transponder sensors' },
+            ].map(api => {
+              const isEnabled = state.enabledAPIs?.[api.key];
+              return (
+                <div key={api.key} className="bg-surface border border-neutral/60 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                  <div>
+                    <div className="font-mono text-sm text-text font-bold">{api.label}</div>
+                    <div className="text-xs text-tdim mt-0.5">{api.desc}</div>
+                    <div className="text-xs font-mono text-tdim mt-1">
+                      Status: <span className={isEnabled ? 'text-emerald-400 font-bold' : 'text-tdim'}>{isEnabled ? 'ONLINE' : 'OFFLINE'}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleApi(api.key)}
+                    className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                      isEnabled
+                        ? 'bg-emerald-500 border border-emerald-400 text-white hover:opacity-90'
+                        : 'bg-surface border border-neutral text-tdim hover:bg-neutral/50'
+                    }`}
+                  >
+                    {isEnabled ? 'ACTIVE' : 'MUTED'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* About SkyWatch v7.0 */}
+        <div>
+          <div className="font-mono text-xs text-tdim tracking-widest mb-3">ℹ️ SYSTEM INTEL</div>
+          <div className="bg-surface border border-neutral/60 rounded-xl p-4 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-text font-black font-display">SkyWatch v7.0</div>
+              <span className="font-mono text-[10px] bg-cyan/15 text-cyan px-2 py-0.5 rounded font-bold border border-cyan/30">
+                GOD&apos;S EYE EDITION
+              </span>
             </div>
-            
-            <div className="bg-surface border border-neutral rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-mono text-sm text-cyan tracking-wider font-bold">⭐ OPENSKY NETWORK</div>
-                {(state.apiKeysConfigured?.openskyUsername || state.apiKeysConfigured?.openskyPassword) && (
-                  <span className="text-xs text-cargo font-mono font-bold">✓ Configured</span>
-                )}
-              </div>
-              <div className="text-xs text-tdim mb-3 leading-relaxed">
-                Provide a free OpenSky username and password to unlock a 10x higher rate limit, bypass server IP blocks, and expand map coverage.
-              </div>
-              <input
-                type="text"
-                placeholder="Username (leave blank to keep current)"
-                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none mb-2 shadow-sm"
-                value={state.apiKeys.openskyUsername || ''}
-                onChange={(e) => setApiKey('openskyUsername', e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder="Password (leave blank to keep current)"
-                className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text text-sm focus:border-cyan outline-none shadow-sm"
-                value={state.apiKeys.openskyPassword || ''}
-                onChange={(e) => setApiKey('openskyPassword', e.target.value)}
-              />
+            <div className="text-xs text-tdim leading-relaxed">
+              Boundless 3D airspace intelligence featuring dead-reckoning interpolation, Cockpit Chase HUD, great-circle flight trajectory reconstruction, and multi-spectrum sensor vision modes.
             </div>
-            
+            <div className="pt-2 border-t border-neutral/40 flex items-center justify-between text-[10px] font-mono text-tdim">
+              <span>ENGINE: MAPLIBRE GL v4</span>
+              <span>FEED: LIVE ADS-B</span>
+            </div>
           </div>
         </div>
 
-        {/* Global Admin Save */}
-        <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">🛡️ ADMIN CONTROLS</div>
-          <button 
-            onClick={() => setShowPasswordModal(true)}
-            className="w-full bg-military border border-military text-white px-4 py-3 rounded-xl font-mono text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 shadow-sm"
-          >
-            SAVE AS GLOBAL DEFAULTS
-          </button>
-          <div className="text-xs text-tdim mt-2 text-center">
-            Applies your current settings & API keys to all users.
-          </div>
-        </div>
-
-        {/* About */}
-        <div>
-          <div className="font-mono text-xs text-tdim tracking-widest mb-3">ℹ️ ABOUT</div>
-          <div className="bg-surface border border-neutral rounded-xl p-3 shadow-sm">
-            <div className="text-sm text-text font-bold">SkyWatch v6.0</div>
-            <div className="text-xs text-tdim mt-1">Next.js Edition with Real-time Flight Tracking</div>
-          </div>
-        </div>
       </div>
-
-      {/* Password Modal Overlay */}
-      {showPasswordModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-neutral/80 backdrop-blur-sm">
-          <div className="bg-surface border border-neutral rounded-2xl w-full max-w-xs p-6 shadow-2xl">
-            <div className="font-mono font-bold text-lg text-cyan mb-2 text-center">🛡️ Admin Verification</div>
-            <p className="text-xs text-tdim mb-4 text-center">Enter admin password to save settings globally.</p>
-            <input 
-              type="password"
-              placeholder="Password"
-              className="w-full bg-surface border border-neutral rounded-lg px-3 py-2 text-text mb-4 focus:border-cyan outline-none text-center tracking-widest shadow-sm"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAdminSave()}
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button 
-                onClick={() => { setShowPasswordModal(false); setAdminPassword(''); }}
-                className="flex-1 bg-surface border border-neutral text-tdim px-3 py-2 rounded-lg font-mono text-xs hover:bg-neutral/50 font-bold shadow-sm"
-              >
-                CANCEL
-              </button>
-              <button 
-                onClick={handleAdminSave}
-                disabled={isSaving || !adminPassword}
-                className="flex-1 bg-red-500 border border-red-400 text-white px-3 py-2 rounded-lg font-mono text-xs font-bold hover:bg-red-600 disabled:opacity-50"
-              >
-                {isSaving ? 'SAVING...' : 'CONFIRM'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

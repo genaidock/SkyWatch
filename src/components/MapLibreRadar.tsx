@@ -96,7 +96,7 @@ export default function MapLibreRadar({
 
       const ne = bounds.getNorthEast();
       const spanKm = haversine(center.lat, center.lng, ne.lat, ne.lng);
-      const effectiveRadius = Math.max(15, Math.min(350, Math.round(spanKm)));
+      const effectiveRadius = Math.max(15, Math.round(spanKm));
 
       let isPanned = false;
       if (userLat != null && userLon != null) {
@@ -503,14 +503,6 @@ export default function MapLibreRadar({
             'fill-extrusion-opacity': 0.7
           }}
         />
-        <Marker longitude={userLon} latitude={userLat}>
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-4 h-4 rounded-full border flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.8)] bg-black/20 border-black/50">
-              <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
-            </div>
-            <div className="text-[10px] font-mono mt-1 text-black/70">ORG</div>
-          </div>
-        </Marker>
 
         {iconsLoaded && (
           <>

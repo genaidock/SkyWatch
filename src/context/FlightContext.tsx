@@ -430,7 +430,7 @@ export function FlightProvider({ children }) {
   const activeRadius = state.viewport.radiusKm || state.radius;
   const roundedLat = activeLat != null ? Math.round(activeLat * 100) / 100 : null;
   const roundedLon = activeLon != null ? Math.round(activeLon * 100) / 100 : null;
-  const clampedRadius = Math.max(15, Math.min(350, Math.round(activeRadius)));
+  const effectiveRadius = Math.max(15, Math.round(activeRadius));
 
   // SSE for real-time updates
   useEffect(() => {
@@ -447,7 +447,7 @@ export function FlightProvider({ children }) {
       const params = new URLSearchParams({
         lat: roundedLat.toFixed(4),
         lon: roundedLon.toFixed(4),
-        radius: String(clampedRadius),
+        radius: String(effectiveRadius),
       });
       for (const [key, val] of Object.entries(state.enabledAPIs)) {
         params.set(key, String(!!val));
@@ -469,7 +469,7 @@ export function FlightProvider({ children }) {
           if (data.flights) {
             if (data.flights.length === 0 && state.enabledAPIs.opensky) {
               console.warn('SSE returned 0 flights. Falling back to client-side fetch.');
-              const fallbackFlights = await fetchFlights(roundedLat, roundedLon, clampedRadius, state.enabledAPIs, { 
+              const fallbackFlights = await fetchFlights(roundedLat, roundedLon, effectiveRadius, state.enabledAPIs, { 
                 airLabs: state.apiKeys.airLabs,
                 openskyUsername: state.apiKeys.openskyUsername,
                 openskyPassword: state.apiKeys.openskyPassword
@@ -512,7 +512,7 @@ export function FlightProvider({ children }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if ((window as any).__skywatch_sse) (window as any).__skywatch_sse.close();
     };
-  }, [roundedLat, roundedLon, clampedRadius, state.enabledAPIs, processFlightData]);
+  }, [roundedLat, roundedLon, effectiveRadius, state.enabledAPIs, processFlightData]);
 
   // Fallback polling (only runs if SSE is not active)
   useEffect(() => {

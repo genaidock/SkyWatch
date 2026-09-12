@@ -1,11 +1,135 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import MapGL, { Source, Layer, Marker, useMap } from 'react-map-gl/maplibre';
 import * as SunCalc from 'suncalc';
 import CockpitHudOverlay from './CockpitHudOverlay';
 import { haversine, calculateGreatCircleRoute, ALL_AIRPORTS } from '../lib/utils';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+function isWebGLAvailable(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    return Boolean(gl);
+  } catch {
+    return false;
+  }
+}
+
+interface ErrorBoundaryProps {
+  fallback: (error: Error, reset: () => void) => ReactNode;
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class WebGLErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('MapLibre WebGL caught by ErrorBoundary:', error, errorInfo);
+  }
+
+  reset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      return this.props.fallback(this.state.error, this.reset);
+    }
+    return this.props.children;
+  }
+}
+
+function TacticalFallbackView({
+  error,
+  onRetry,
+  flights,
+  onSelectFlight,
+}: {
+  error?: any;
+  onRetry: () => void;
+  flights: any[];
+  onSelectFlight: (f: any) => void;
+}) {
+  return (
+    <div className="relative w-full h-full bg-[#0a0f18] border border-cyan/20 rounded-xl p-4 flex flex-col justify-between overflow-hidden font-mono select-none">
+      <div className="flex items-center justify-between border-b border-cyan/20 pb-2 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" />
+          <span className="text-yellow-400 font-bold text-xs tracking-wider">GRAPHICS ACCELERATION BLOCKED</span>
+        </div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="px-3 py-1 bg-cyan/20 hover:bg-cyan/30 text-cyan text-xs rounded border border-cyan/40 transition-colors"
+        >
+          RELOAD ENGINE
+        </button>
+      </div>
+
+      <div className="text-[11px] text-neutral-300 space-y-1 my-1">
+        <p className="text-yellow-400 font-semibold">WebGL initialization was blocked by the browser.</p>
+        <p className="text-neutral-400 text-[10px]">
+          Chrome may have temporarily blocked GPU context due to memory limits or disabled hardware acceleration.
+        </p>
+        <div className="mt-1 text-[10px] text-neutral-300 bg-black/40 p-2 rounded border border-white/5 space-y-0.5">
+          <p><span className="text-cyan font-bold">1.</span> Chrome Settings → System → Enable <span className="text-white">"Use graphics acceleration when available"</span></p>
+          <p><span className="text-cyan font-bold">2.</span> Close this tab and reopen it to reset the browser context lock.</p>
+        </div>
+      </div>
+
+      {/* Airspace Table Fallback */}
+      <div className="flex-1 overflow-y-auto mt-2 border border-white/5 rounded bg-black/30 p-2">
+        <div className="text-[10px] text-cyan uppercase tracking-wider mb-1 flex justify-between font-bold">
+          <span>Active Airspace ({flights.length} targets)</span>
+          <span>Dist / Alt</span>
+        </div>
+        <div className="space-y-1">
+          {flights.slice(0, 10).map((f) => (
+            <div
+              key={f.id}
+              onClick={() => onSelectFlight(f)}
+              className="flex items-center justify-between text-[11px] py-1 px-2 rounded bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-white font-bold">{f.callsign || f.icao24}</span>
+                <span className="text-[9px] text-neutral-400">{f.type || 'AIRCRAFT'}</span>
+              </div>
+              <div className="text-right font-mono">
+                <span className="text-cyan">{Math.round(f.distKm || 0)}km</span>
+                <span className="text-neutral-400 ml-2">{f.altitude?.toLocaleString()}ft</span>
+              </div>
+            </div>
+          ))}
+          {flights.length === 0 && (
+            <div className="text-[10px] text-neutral-500 py-3 text-center">Scanning radar airspace...</div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="flex-1 py-1.5 bg-cyan/20 hover:bg-cyan/30 text-cyan text-xs rounded border border-cyan/40 text-center font-bold transition-colors"
+        >
+          REFRESH PAGE
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // SVG without glow filter for crisp display, perfectly centered in 48x48
 const PLANE_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -32,7 +156,7 @@ const ICONS = {
   'heli-black': HELI_SVG.replace(/COLOR/g, '#000000'),
 };
 
-export default function MapLibreRadar({
+function MapLibreRadarInternal({
   flights,
   selectedFlight,
   userLat,
@@ -45,6 +169,7 @@ export default function MapLibreRadar({
   onViewportChange,
   trailsRef,
   sensorMode = 'normal',
+  onWebGLError,
 }: {
   flights: any[];
   selectedFlight: any;
@@ -58,6 +183,7 @@ export default function MapLibreRadar({
   onViewportChange?: (centerLat: number, centerLon: number, radiusKm: number, isPanned: boolean) => void;
   trailsRef?: React.MutableRefObject<Map<string, Array<{ lat: number; lon: number; ts: number }>>>;
   sensorMode?: string;
+  onWebGLError?: (error: any) => void;
 }) {
   const [iconsLoaded, setIconsLoaded] = useState(false);
   const [blinkTick, setBlinkTick] = useState(true);
@@ -72,13 +198,14 @@ export default function MapLibreRadar({
     }
   }, [sensorMode]);
   
-  // Refs for animation
-  const mapRef = useRef(null);
-  const rafRef = useRef(null);
+  // Refs for animation & throttling
+  const mapRef = useRef<any>(null);
+  const rafRef = useRef<any>(null);
   const lastTimeRef = useRef(Date.now());
   const activeFlightsRef = useRef<any[]>([]);
   const moveTimerRef = useRef<any>(null);
   const lastChaseViewportRef = useRef<number>(0);
+  const lastGeoJsonUpdateRef = useRef<number>(0);
 
   // Viewport calculation on map pan/zoom
   const handleMoveEnd = useCallback(() => {
@@ -177,10 +304,14 @@ export default function MapLibreRadar({
       lastTimeRef.current = now;
 
       if (mapRef.current) {
-        const map = mapRef.current.getMap();
-        const source = map.getSource('flights-source');
-        
-        if (source) {
+        let map: any = null;
+        try {
+          map = (mapRef.current as any).getMap?.() || mapRef.current;
+        } catch {
+          // map instance not ready
+        }
+
+        if (map && map.getSource) {
           activeFlightsRef.current.forEach(f => {
             if (f.speed > 0 && !f.onGround) {
               
@@ -192,8 +323,6 @@ export default function MapLibreRadar({
               const dy = Math.cos(headingRad) * speedDegPerSec * dt;
               const dx = (Math.sin(headingRad) * speedDegPerSec * dt) / Math.cos(latRad);
               
-              // If we haven't received fresh API data in a while, gracefully slow the plane down 
-              // so it doesn't coast off into space forever.
               let speedMultiplier = 1.0;
               if (f.staleTimer >= 2) speedMultiplier = 0.5; // ~10 seconds stale
               if (f.staleTimer >= 4) speedMultiplier = 0.1; // ~20 seconds stale
@@ -202,155 +331,161 @@ export default function MapLibreRadar({
               f.targetLat += dy * speedMultiplier;
               f.targetLon += dx * speedMultiplier;
               
-              // 2. Smoothly LERP the visual display coordinates towards the TARGET coordinates
-              // This completely eliminates teleporting when fresh API data arrives.
+              // 2. Smoothly LERP visual coordinates towards target coordinates
               const lerpFactor = Math.min(dt * 3.0, 1.0); 
-              
               f.lat += (f.targetLat - f.lat) * lerpFactor;
               f.lon += (f.targetLon - f.lon) * lerpFactor;
             }
           });
 
-          // Build a fresh GeoJSON payload
-          const geoJson = {
-            type: 'FeatureCollection',
-            features: activeFlightsRef.current.map((f) => {
-              // 1. Determine State Color (Aura & Plane Base)
-              let stateColor = '#00e5ff'; // Cruising (Cyan)
-              let stateSuffix = 'cyan';
-              
-              if (selectedFlight?.id === f.id) {
-                stateColor = '#000000'; // Selected (Black)
-                stateSuffix = 'black';
-              } else if (f.onGround) {
-                stateColor = '#ffaa00'; // Amber
-                stateSuffix = 'amber';
-              } else if (f.altitude < 3000) {
-                stateColor = '#ff003c'; // Red
-                stateSuffix = 'red';
-              }
+          // 2. Throttle GeoJSON buffer push to ~10 Hz (every 100ms)
+          // Calling source.setData at 60 FPS thrashes WebGL worker buffers and triggers context loss!
+          const shouldUpdateGeoJson = (now - lastGeoJsonUpdateRef.current) >= 100;
+          if (shouldUpdateGeoJson) {
+            lastGeoJsonUpdateRef.current = now;
 
-              // 2. Determine Shape
-              let shape = f.category === 'helicopter' ? 'heli' : 'plane';
-              let icon = `${shape}-${stateSuffix}`;
-
-              // 3. Determine Strobe Light Color (Type)
-              let typeColor = '#ffffff'; // Civil
-              if (f.category === 'cargo') typeColor = '#00ff9d';
-              else if (f.category === 'private') typeColor = '#8a2be2';
-              else if (f.category === 'military') typeColor = '#cc0000';
-              else if (f.category === 'helicopter') typeColor = '#39ff14';
-
-              return {
-                type: 'Feature',
-                geometry: {
-                  type: 'Point',
-                  coordinates: [f.lon, f.lat],
-                },
-                properties: {
-                  id: f.id,
-                  callsign: f.callsign,
-                  heading: f.heading || 0,
-                  icon,
-                  stateColor,
-                  typeColor,
-                  isSel: selectedFlight?.id === f.id,
-                },
-              };
-            })
-          };
-
-          // Inject directly into MapLibre (Bypasses React rendering entirely!)
-          source.setData(geoJson);
-
-          // 3. Dynamic Selected Flight Trail & Great-Circle Route
-          const trailSource: any = map.getSource('flight-trail-source');
-          const routeSource: any = map.getSource('flight-route-source');
-          const waypointsSource: any = map.getSource('flight-waypoints-source');
-
-          if (selectedFlight) {
-            const activeSel = activeFlightsRef.current.find(f => f.id === selectedFlight.id) || selectedFlight;
-            const curLat = activeSel.lat;
-            const curLon = activeSel.lon;
-
-            // A. Live Breadcrumb Trail from Position Buffer
-            if (trailSource && trailsRef?.current) {
-              const key = selectedFlight.icao24 || selectedFlight.callsign || selectedFlight.id;
-              const historyPts = trailsRef.current.get(key) || [];
-              const trailCoords = historyPts.map((p: any) => [p.lon, p.lat]);
-              if (curLon != null && curLat != null) {
-                trailCoords.push([curLon, curLat]);
-              }
-              if (trailCoords.length >= 2) {
-                trailSource.setData({
+            try {
+              const source = map.getSource('flights-source');
+              if (source) {
+                const geoJson = {
                   type: 'FeatureCollection',
-                  features: [{
-                    type: 'Feature',
-                    geometry: { type: 'LineString', coordinates: trailCoords },
-                    properties: { type: 'trail' }
-                  }]
-                });
+                  features: activeFlightsRef.current.map((f) => {
+                    let stateColor = '#00e5ff'; // Cruising (Cyan)
+                    let stateSuffix = 'cyan';
+                    
+                    if (selectedFlight?.id === f.id) {
+                      stateColor = '#000000'; // Selected (Black)
+                      stateSuffix = 'black';
+                    } else if (f.onGround) {
+                      stateColor = '#ffaa00'; // Amber
+                      stateSuffix = 'amber';
+                    } else if (f.altitude < 3000) {
+                      stateColor = '#ff003c'; // Red
+                      stateSuffix = 'red';
+                    }
+
+                    let shape = f.category === 'helicopter' ? 'heli' : 'plane';
+                    let icon = `${shape}-${stateSuffix}`;
+
+                    let typeColor = '#ffffff'; // Civil
+                    if (f.category === 'cargo') typeColor = '#00ff9d';
+                    else if (f.category === 'private') typeColor = '#8a2be2';
+                    else if (f.category === 'military') typeColor = '#cc0000';
+                    else if (f.category === 'helicopter') typeColor = '#39ff14';
+
+                    return {
+                      type: 'Feature',
+                      geometry: {
+                        type: 'Point',
+                        coordinates: [f.lon, f.lat],
+                      },
+                      properties: {
+                        id: f.id,
+                        callsign: f.callsign,
+                        heading: f.heading || 0,
+                        icon,
+                        stateColor,
+                        typeColor,
+                        isSel: selectedFlight?.id === f.id,
+                      },
+                    };
+                  })
+                };
+                source.setData(geoJson);
+              }
+
+              // 3. Dynamic Selected Flight Trail & Great-Circle Route
+              const trailSource: any = map.getSource('flight-trail-source');
+              const routeSource: any = map.getSource('flight-route-source');
+              const waypointsSource: any = map.getSource('flight-waypoints-source');
+
+              if (selectedFlight) {
+                const activeSel = activeFlightsRef.current.find(f => f.id === selectedFlight.id) || selectedFlight;
+                const curLat = activeSel.lat;
+                const curLon = activeSel.lon;
+
+                // A. Live Breadcrumb Trail from Position Buffer
+                if (trailSource && trailsRef?.current) {
+                  const key = selectedFlight.icao24 || selectedFlight.callsign || selectedFlight.id;
+                  const historyPts = trailsRef.current.get(key) || [];
+                  const trailCoords = historyPts.map((p: any) => [p.lon, p.lat]);
+                  if (curLon != null && curLat != null) {
+                    trailCoords.push([curLon, curLat]);
+                  }
+                  if (trailCoords.length >= 2) {
+                    trailSource.setData({
+                      type: 'FeatureCollection',
+                      features: [{
+                        type: 'Feature',
+                        geometry: { type: 'LineString', coordinates: trailCoords },
+                        properties: { type: 'trail' }
+                      }]
+                    });
+                  } else {
+                    trailSource.setData(emptyGeoJson);
+                  }
+                }
+
+                // B. Origin -> Plane -> Destination Great Circle Corridor
+                if (routeSource && waypointsSource) {
+                  const depLat = selectedFlight.routeObj?.depLat ?? selectedFlight.depLat;
+                  const depLon = selectedFlight.routeObj?.depLon ?? selectedFlight.depLon;
+                  const arrLat = selectedFlight.routeObj?.arrLat ?? selectedFlight.arrLat;
+                  const arrLon = selectedFlight.routeObj?.arrLon ?? selectedFlight.arrLon;
+
+                  const routeFeatures: any[] = [];
+                  const waypointFeatures: any[] = [];
+
+                  if (curLat != null && curLon != null) {
+                    // Flown segment: origin -> current
+                    if (depLat != null && depLon != null) {
+                      const flownArc = calculateGreatCircleRoute(depLat, depLon, curLat, curLon, 30);
+                      if (flownArc.length >= 2) {
+                        routeFeatures.push({
+                          type: 'Feature',
+                          geometry: { type: 'LineString', coordinates: flownArc },
+                          properties: { segment: 'flown' }
+                        });
+                      }
+                      waypointFeatures.push({
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: [depLon, depLat] },
+                        properties: { label: selectedFlight.from?.code || 'DEP', role: 'origin' }
+                      });
+                    }
+
+                    // Planned segment: current -> destination
+                    if (arrLat != null && arrLon != null) {
+                      const plannedArc = calculateGreatCircleRoute(curLat, curLon, arrLat, arrLon, 30);
+                      if (plannedArc.length >= 2) {
+                        routeFeatures.push({
+                          type: 'Feature',
+                          geometry: { type: 'LineString', coordinates: plannedArc },
+                          properties: { segment: 'planned' }
+                        });
+                      }
+                      waypointFeatures.push({
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: [arrLon, arrLat] },
+                        properties: { label: selectedFlight.to?.code || 'ARR', role: 'destination' }
+                      });
+                    }
+                  }
+
+                  routeSource.setData({ type: 'FeatureCollection', features: routeFeatures });
+                  waypointsSource.setData({ type: 'FeatureCollection', features: waypointFeatures });
+                }
               } else {
-                trailSource.setData(emptyGeoJson);
+                if (trailSource) trailSource.setData(emptyGeoJson);
+                if (routeSource) routeSource.setData(emptyGeoJson);
+                if (waypointsSource) waypointsSource.setData(emptyGeoJson);
               }
+            } catch (err) {
+              console.warn('Map source update exception:', err);
             }
-
-            // B. Origin -> Plane -> Destination Great Circle Corridor
-            if (routeSource && waypointsSource) {
-              const depLat = selectedFlight.routeObj?.depLat ?? selectedFlight.depLat;
-              const depLon = selectedFlight.routeObj?.depLon ?? selectedFlight.depLon;
-              const arrLat = selectedFlight.routeObj?.arrLat ?? selectedFlight.arrLat;
-              const arrLon = selectedFlight.routeObj?.arrLon ?? selectedFlight.arrLon;
-
-              const routeFeatures: any[] = [];
-              const waypointFeatures: any[] = [];
-
-              if (curLat != null && curLon != null) {
-                // Flown segment: origin -> current
-                if (depLat != null && depLon != null) {
-                  const flownArc = calculateGreatCircleRoute(depLat, depLon, curLat, curLon, 30);
-                  if (flownArc.length >= 2) {
-                    routeFeatures.push({
-                      type: 'Feature',
-                      geometry: { type: 'LineString', coordinates: flownArc },
-                      properties: { segment: 'flown' }
-                    });
-                  }
-                  waypointFeatures.push({
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: [depLon, depLat] },
-                    properties: { label: selectedFlight.from?.code || 'DEP', role: 'origin' }
-                  });
-                }
-
-                // Planned segment: current -> destination
-                if (arrLat != null && arrLon != null) {
-                  const plannedArc = calculateGreatCircleRoute(curLat, curLon, arrLat, arrLon, 30);
-                  if (plannedArc.length >= 2) {
-                    routeFeatures.push({
-                      type: 'Feature',
-                      geometry: { type: 'LineString', coordinates: plannedArc },
-                      properties: { segment: 'planned' }
-                    });
-                  }
-                  waypointFeatures.push({
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: [arrLon, arrLat] },
-                    properties: { label: selectedFlight.to?.code || 'ARR', role: 'destination' }
-                  });
-                }
-              }
-
-              routeSource.setData({ type: 'FeatureCollection', features: routeFeatures });
-              waypointsSource.setData({ type: 'FeatureCollection', features: waypointFeatures });
-            }
-          } else {
-            if (trailSource) trailSource.setData(emptyGeoJson);
-            if (routeSource) routeSource.setData(emptyGeoJson);
-            if (waypointsSource) waypointsSource.setData(emptyGeoJson);
           }
 
-          // 4. Dynamic Cockpit Chase Camera Tethering (60 FPS)
+          // 4. Dynamic Cockpit Chase Camera Tethering (remains smooth 60 FPS)
           if (isChaseMode && selectedFlight) {
             const chased = activeFlightsRef.current.find(f => f.id === selectedFlight.id);
             if (chased && chased.lat != null && chased.lon != null) {
@@ -449,6 +584,18 @@ export default function MapLibreRadar({
   // Load custom SVG images into MapLibre on load
   const onMapLoad = useCallback((e) => {
     const map = e.target;
+    const canvas = map.getCanvas?.();
+    if (canvas) {
+      canvas.addEventListener('webglcontextlost', (evt: Event) => {
+        evt.preventDefault();
+        console.warn('WebGL Context Lost on MapLibre canvas.');
+        onWebGLError?.(new Error('WebGL context lost. Hardware acceleration was reset.'));
+      }, false);
+      canvas.addEventListener('webglcontextrestored', () => {
+        console.log('WebGL Context Restored on MapLibre canvas.');
+      }, false);
+    }
+
     const promises = Object.entries(ICONS).map(([name, svgString]) => {
       return new Promise<void>((resolve) => {
         const img = new Image(48, 48);
@@ -468,7 +615,7 @@ export default function MapLibreRadar({
     Promise.all(promises).then(() => {
       setIconsLoaded(true);
     });
-  }, []);
+  }, [onWebGLError]);
 
   const mapStyleUrl = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
@@ -493,6 +640,13 @@ export default function MapLibreRadar({
         style={{ width: '100%', height: '100%' }}
         interactive={true}
         onLoad={onMapLoad}
+        onError={(e: any) => {
+          console.warn('MapGL Error:', e);
+          const errStr = e?.error?.message || String(e?.error || e?.statusMessage || '');
+          if (errStr.toLowerCase().includes('webgl') || errStr.toLowerCase().includes('context')) {
+            onWebGLError?.(e.error || new Error(errStr));
+          }
+        }}
         onMoveEnd={handleMoveEnd}
         onClick={(e) => {
           if (e.features && e.features.length > 0) {
@@ -762,5 +916,61 @@ export default function MapLibreRadar({
         <CockpitHudOverlay flight={selectedFlight} onExitChase={onExitChase} />
       )}
     </div>
+  );
+}
+
+export default function MapLibreRadar(props: {
+  flights: any[];
+  selectedFlight: any;
+  userLat: number | null;
+  userLon: number | null;
+  radius: number;
+  recenterTrigger?: number;
+  onSelectFlight: (flight: any) => void;
+  isChaseMode?: boolean;
+  onExitChase?: () => void;
+  onViewportChange?: (centerLat: number, centerLon: number, radiusKm: number, isPanned: boolean) => void;
+  trailsRef?: React.MutableRefObject<Map<string, Array<{ lat: number; lon: number; ts: number }>>>;
+  sensorMode?: string;
+}) {
+  const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
+  const [runtimeError, setRuntimeError] = useState<any>(null);
+
+  useEffect(() => {
+    setWebglSupported(isWebGLAvailable());
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setRuntimeError(null);
+    setWebglSupported(isWebGLAvailable());
+  }, []);
+
+  if (webglSupported === false || runtimeError) {
+    return (
+      <TacticalFallbackView
+        error={runtimeError?.message || 'WebGL hardware acceleration is disabled or blocked in your browser.'}
+        onRetry={handleRetry}
+        flights={props.flights}
+        onSelectFlight={props.onSelectFlight}
+      />
+    );
+  }
+
+  return (
+    <WebGLErrorBoundary
+      fallback={(error, reset) => (
+        <TacticalFallbackView
+          error={error?.message || 'WebGL Initialization Failed'}
+          onRetry={() => {
+            reset();
+            handleRetry();
+          }}
+          flights={props.flights}
+          onSelectFlight={props.onSelectFlight}
+        />
+      )}
+    >
+      <MapLibreRadarInternal {...props} onWebGLError={(err) => setRuntimeError(err)} />
+    </WebGLErrorBoundary>
   );
 }

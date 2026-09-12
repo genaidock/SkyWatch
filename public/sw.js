@@ -116,11 +116,15 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => caches.match(request).then(cached => cached || caches.match('/')))
     );
     return;
   }
 
-  // Default: network-only
-  event.respondWith(fetch(request).catch(() => caches.match(request)));
+  // Default: network-only with safe fallback
+  event.respondWith(
+    fetch(request).catch(() =>
+      caches.match(request).then((cached) => cached || new Response('', { status: 503, statusText: 'Offline' }))
+    )
+  );
 });

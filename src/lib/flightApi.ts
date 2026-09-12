@@ -267,7 +267,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     }
     sources.push({
       name: 'OpenSky',
-      url: `https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`,
+      url: proxied(`https://opensky-network.org/api/states/all?lamin=${(userLat - deg).toFixed(4)}&lomin=${(userLon - degLon).toFixed(4)}&lamax=${(userLat + deg).toFixed(4)}&lomax=${(userLon + degLon).toFixed(4)}`),
       headers: authHeader,
       parser: (data) => parseOpenSky(data, userLat, userLon, radiusKm),
     });
@@ -302,18 +302,18 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     .flatMap(r => (r as any).value)
     .filter(Boolean);
 
-  // Resilient direct fallback: if proxy or primary APIs returned 0, query adsb.lol directly
+  // Resilient fallback: if proxy or primary APIs returned 0, query adsb.lol via proxy
   if (flights.length === 0) {
     try {
-      const directUrl = `https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`;
-      const directRes = await fetchWithTimeout(directUrl, 6000);
-      if (directRes.ok) {
-        const directData = await directRes.json();
-        const fallbackFlights = parseADSBLol(directData, userLat, userLon, radiusKm, 'ADS-B.lol (Direct)');
+      const fallbackUrl = proxied(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`);
+      const fallbackRes = await fetchWithTimeout(fallbackUrl, 6000);
+      if (fallbackRes.ok) {
+        const directData = await fallbackRes.json();
+        const fallbackFlights = parseADSBLol(directData, userLat, userLon, radiusKm, 'ADS-B.lol (Proxy)');
         flights = fallbackFlights;
       }
     } catch (e) {
-      console.warn('Direct adsb.lol fallback failed:', e);
+      console.warn('Fallback adsb.lol fetch failed:', e);
     }
   }
 

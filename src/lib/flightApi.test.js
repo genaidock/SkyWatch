@@ -133,12 +133,29 @@ describe('flightApi parsers', () => {
       const result = uniqueFlights([f1, f2, f3]);
       expect(result.map(r => r.distKm)).toEqual([10, 50, 100]);
     });
+
+    test('categorizes helicopter by type or description', () => {
+      const h1 = { icao24: 'H1', type: 'B06', desc: 'Bell 206 JetRanger', distKm: 10 };
+      const h2 = { icao24: 'H2', type: 'R44', desc: 'Robinson R44', distKm: 20 };
+      const h3 = { icao24: 'H3', type: 'EC135', desc: 'Eurocopter rotorcraft', distKm: 30 };
+      const result = uniqueFlights([h1, h2, h3]);
+      expect(result[0].category).toBe('helicopter');
+      expect(result[0].isHeli).toBe(true);
+      expect(result[1].category).toBe('helicopter');
+      expect(result[1].isHeli).toBe(true);
+      expect(result[2].category).toBe('helicopter');
+      expect(result[2].isHeli).toBe(true);
+    });
   });
 
   describe('generateDemoFlights', () => {
-    test('returns demo flights', () => {
+    test('returns demo flights including a helicopter', () => {
       const flights = generateDemoFlights(18.6, 73.7, 100);
-      expect(flights.length).toBeGreaterThanOrEqual(3);
+      expect(flights.length).toBeGreaterThanOrEqual(4);
+      const heli = flights.find(f => f.category === 'helicopter');
+      expect(heli).toBeDefined();
+      expect(heli.isHeli).toBe(true);
+      expect(heli.type).toBe('B06');
       flights.forEach(f => {
         expect(f.isDemo).toBe(true);
         expect(f.callsign).toBeTruthy();

@@ -364,10 +364,19 @@ export function uniqueFlights(flights) {
     
     // Check military identification registry (ICAO hex, callsign prefixes, airframe, description)
     const militaryCheck = identifyMilitaryFlight(f.icao24, f.callsign, f.type, f.desc);
+    const isHeli = /helicopter|rotorcraft/.test(desc) || /^(R44|R66|B06|B40|AW1|S76|S92|AS3|EC1|H12|H13|H14|H15|UH60|AH64|CH47)/.test(type);
+    if (isHeli) {
+      f.isHeli = true;
+    }
+
     if (militaryCheck.isMilitary) {
       category = 'military';
       f.isMilitary = true;
       f.branch = militaryCheck.branch;
+    }
+    // Rotorcraft / Helicopters
+    else if (isHeli) {
+      category = 'helicopter';
     }
     // Cargo planes (FedEx, UPS, Atlas Air, Polar, ABX, Omni, Kalitta, Cargolux, Southern Air, Nippon Cargo, Polar Air)
     else if (/freighter|cargo/.test(desc) || /^(FDX|UPS|GTI|PAC|ABX|OAE|CKS|CLX|SOO|NCA|PO)/.test(callsign)) {
@@ -389,6 +398,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
     { cs: 'FDX123', from: 'MEM', to: 'DXB', alt: 32000, spd: 450, hdg: 120, type: 'B77W', cat: 'cargo' },
     { cs: 'RCH11', from: 'RMS', to: 'ADW', alt: 28000, spd: 420, hdg: 200, type: 'C17', cat: 'military' },
     { cs: 'GLF5', from: 'TEB', to: 'VNY', alt: 41000, spd: 490, hdg: 270, type: 'GLF', cat: 'private' },
+    { cs: 'VT-HLI', from: 'BOM', to: 'PUN', alt: 2400, spd: 120, hdg: 110, type: 'B06', cat: 'helicopter' },
   ];
 
   return demos.map((d, i) => {
@@ -422,6 +432,7 @@ export function generateDemoFlights(baseLat, baseLon, radius) {
       progress: 0.5,
       firstSeen: new Date(),
       isDemo: true,
+      isHeli: d.cat === 'helicopter',
     };
   });
 }

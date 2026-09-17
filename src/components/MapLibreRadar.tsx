@@ -364,14 +364,15 @@ function MapLibreRadarInternal({
                       stateSuffix = 'red';
                     }
 
-                    let shape = f.category === 'helicopter' ? 'heli' : 'plane';
+                    const isHeli = f.category === 'helicopter' || f.isHeli;
+                    let shape = isHeli ? 'heli' : 'plane';
                     let icon = `${shape}-${stateSuffix}`;
 
                     let typeColor = '#ffffff'; // Civil
-                    if (f.category === 'cargo') typeColor = '#00ff9d';
+                    if (isHeli) typeColor = '#39ff14';
+                    else if (f.category === 'cargo') typeColor = '#00ff9d';
                     else if (f.category === 'private') typeColor = '#8a2be2';
                     else if (f.category === 'military') typeColor = '#cc0000';
-                    else if (f.category === 'helicopter') typeColor = '#39ff14';
 
                     return {
                       type: 'Feature',

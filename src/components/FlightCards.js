@@ -14,12 +14,15 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
     <div className="px-3 pb-6 space-y-3 pt-3">
       {flights.filter(Boolean).map((f, i) => {
         const category = f.category || 'civil';
-        const isSelected = selectedFlight?.id === f.id;
+        const isHeli = category === 'helicopter' || f.isHeli;
         
         let borderClass = 'border-transparent hover:border-slate-300';
         let barClass = 'bg-civil';
         
-        if (category === 'private') {
+        if (isHeli) {
+           if (isSelected) borderClass = 'border-[#39ff14] ring-1 ring-[#39ff14] shadow-sm shadow-[#39ff14]/20';
+           barClass = 'bg-[#39ff14]';
+        } else if (category === 'private') {
            if (isSelected) borderClass = 'border-private ring-1 ring-private shadow-sm shadow-private/20';
            barClass = 'bg-private';
         } else if (category === 'cargo') {
@@ -46,6 +49,11 @@ export default function FlightCards({ flights = [], selectedFlight = null, onSel
                 {f.category === 'military' && (
                   <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-mono rounded font-bold">
                     {f.branch || 'MIL'}
+                  </span>
+                )}
+                {isHeli && (
+                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-mono rounded font-bold flex items-center gap-1">
+                    <span>🚁</span> HELI
                   </span>
                 )}
               </div>

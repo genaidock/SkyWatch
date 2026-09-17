@@ -116,6 +116,11 @@ export default function DetailScreen({ onBack }) {
                 {f.branch || 'MILITARY'}
               </span>
             )}
+            {(f.category === 'helicopter' || f.isHeli) && (
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-600 border border-emerald-500/40 text-[10px] font-mono rounded-md font-bold flex items-center gap-1">
+                <span>🚁</span> ROTORCRAFT
+              </span>
+            )}
           </div>
         </div>
 

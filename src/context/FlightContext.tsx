@@ -378,9 +378,10 @@ export function FlightProvider({ children }) {
       const timestamped = enriched.map(f => {
         const desc = (f.desc || '').toLowerCase();
         const type = (f.type || '').toUpperCase();
-        const cat = f.category || 'civil';
-        const isHeli = cat === 'helicopter' || desc.includes('helicopter') || desc.includes('rotorcraft') || /^(R44|R66|B06|B40|AW1|S76|S92|AS3|EC1|H12|H13|H14|H15|UH60|AH64|CH47)/.test(type);
-        return { ...f, lastUpdated: Date.now(), isHeli };
+        const cat = f.category;
+        const isHeli = f.isHeli || cat === 'helicopter' || desc.includes('helicopter') || desc.includes('rotorcraft') || /^(R44|R66|B06|B40|AW1|S76|S92|AS3|EC1|H12|H13|H14|H15|UH60|AH64|CH47)/.test(type);
+        const resolvedCategory = (cat && cat !== 'civil') ? cat : (isHeli ? 'helicopter' : (cat || 'civil'));
+        return { ...f, lastUpdated: Date.now(), isHeli, category: resolvedCategory };
       });
       setFlights(timestamped);
       setApiStatus('ok', `Tracking ${enriched.length} flights`);

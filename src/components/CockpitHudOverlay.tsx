@@ -53,6 +53,11 @@ export default function CockpitHudOverlay({ flight, onExitChase }: CockpitHudOve
               {flight.branch || 'MIL'}
             </span>
           )}
+          {(flight.category === 'helicopter' || flight.isHeli) && (
+            <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-mono rounded font-bold">
+              HELI
+            </span>
+          )}
         </div>
 
         {/* Center Compass Tape */}

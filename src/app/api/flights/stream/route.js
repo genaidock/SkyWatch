@@ -2,6 +2,7 @@ import { getRedis } from '@/lib/redis';
 import {
   parseAirplanesLive,
   parseADSBLol,
+  parseADSBFi,
   parseAirLabs,
   parseOpenSky,
   uniqueFlights,
@@ -52,7 +53,7 @@ async function fetchOpenSkyCached(bbox, fetchUrl, authHeader, lat, lon, radiusKm
   return cached ? cached.data : [];
 }
 
-async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { adsblol: true, opensky: true, airlabs: false }) {
+async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { adsblol: true, adsbfi: true, airplaneslive: false, opensky: true, airlabs: false }) {
   const radiusKm = Math.max(10, radius);
   const latF = lat.toFixed(4);
   const lonF = lon.toFixed(4);
@@ -71,6 +72,26 @@ async function fetchFlightsForStream(lat, lon, radius, enabledAPIs = { adsblol: 
       fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADS-B.lol') : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.adsbfi !== false) {
+    fetchers.push(
+      fetchWithTimeout(`https://opendata.adsb.fi/api/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseADSBFi(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.airplaneslive) {
+    const liveHeaders = keys.airplanesLiveKey ? { 'api-auth': keys.airplanesLiveKey } : {};
+    const liveUrl = keys.airplanesLiveUrl || `https://api.airplanes.live/v2/point/${latF}/${lonF}/${distNm}`;
+    fetchers.push(
+      fetchWithTimeout(liveUrl, FETCH_TIMEOUT, liveHeaders)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseAirplanesLive(d, lat, lon, radiusKm) : [])
         .catch(() => [])
     );
   }
@@ -110,6 +131,8 @@ export async function GET(request) {
 
   const enabledAPIs = {
     adsblol: searchParams.get('adsblol') !== 'false',
+    adsbfi: searchParams.get('adsbfi') !== 'false',
+    airplaneslive: searchParams.get('airplaneslive') === 'true',
     opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };

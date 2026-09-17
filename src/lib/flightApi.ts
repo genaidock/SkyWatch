@@ -114,6 +114,10 @@ export function parseADSBLol(data, userLat, userLon, radiusKm, sourceName = 'ADS
   }
 }
 
+export function parseADSBFi(data, userLat, userLon, radiusKm) {
+  return parseADSBLol(data, userLat, userLon, radiusKm, 'ADS-B.fi');
+}
+
 export function parseAirLabs(data, userLat, userLon, radiusKm) {
   try {
     const flights = Array.isArray(data.response) ? data.response : Array.isArray(data.data) ? data.data : [];
@@ -259,7 +263,28 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     });
   }
 
-  // Source 2: OpenSky Network (free global network)
+  // Source 2: ADS-B.fi (open community network)
+  if (enabledAPIs.adsbfi !== false) {
+    sources.push({
+      name: 'ADS-B.fi',
+      url: proxied(`https://opendata.adsb.fi/api/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`),
+      parser: (data) => parseADSBFi(data, userLat, userLon, radiusKm),
+    });
+  }
+
+  // Source 3: Airplanes.live (community network)
+  if (enabledAPIs.airplaneslive) {
+    const liveUrl = apiKeys?.airplanesLiveUrl || `https://api.airplanes.live/v2/point/${latF}/${lonF}/${distNm}`;
+    const liveHeaders = apiKeys?.airplanesLiveKey ? { 'api-auth': apiKeys.airplanesLiveKey } : {};
+    sources.push({
+      name: 'Airplanes.live',
+      url: proxied(liveUrl),
+      headers: liveHeaders,
+      parser: (data) => parseAirplanesLive(data, userLat, userLon, radiusKm),
+    });
+  }
+
+  // Source 4: OpenSky Network (free global network)
   if (enabledAPIs.opensky !== false) {
     let authHeader = {};
     if (apiKeys?.openskyUsername && apiKeys?.openskyPassword) {
@@ -273,7 +298,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     });
   }
 
-  // Source 3: AirLabs (key injected server-side or passed)
+  // Source 5: AirLabs (key injected server-side or passed)
   if (enabledAPIs.airlabs && (apiKeys?.airLabs || apiKeys?.airlabs)) {
     sources.push({
       name: 'AirLabs',
@@ -302,7 +327,7 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
     .flatMap(r => (r as any).value)
     .filter(Boolean);
 
-  // Resilient fallback: if proxy or primary APIs returned 0, query adsb.lol via proxy
+  // Resilient fallback: if primary APIs returned 0, query adsb.lol then adsb.fi
   if (flights.length === 0) {
     try {
       const fallbackUrl = proxied(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`);
@@ -314,6 +339,20 @@ export async function fetchFlights(userLat: number, userLon: number, radiusKm = 
       }
     } catch (e) {
       console.warn('Fallback adsb.lol fetch failed:', e);
+    }
+  }
+
+  if (flights.length === 0) {
+    try {
+      const fallbackFiUrl = proxied(`https://opendata.adsb.fi/api/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`);
+      const fallbackFiRes = await fetchWithTimeout(fallbackFiUrl, 6000);
+      if (fallbackFiRes.ok) {
+        const directFiData = await fallbackFiRes.json();
+        const fallbackFiFlights = parseADSBFi(directFiData, userLat, userLon, radiusKm);
+        flights = fallbackFiFlights;
+      }
+    } catch (e) {
+      console.warn('Fallback adsb.fi fetch failed:', e);
     }
   }
 
@@ -373,6 +412,8 @@ export function uniqueFlights(flights) {
       category = 'military';
       f.isMilitary = true;
       f.branch = militaryCheck.branch;
+      if (militaryCheck.operator) f.operator = militaryCheck.operator;
+      if (militaryCheck.isGov) f.isGov = true;
     }
     // Rotorcraft / Helicopters
     else if (isHeli) {

@@ -116,6 +116,8 @@ export default function SettingsScreen({ onShowToast }) {
           <div className="space-y-2.5">
             {[
               { key: 'adsblol', label: 'ADS-B.lol', desc: 'Real-time open community ADS-B feeder network' },
+              { key: 'adsbfi', label: 'ADS-B.fi', desc: 'Worldwide crowdsourced unfiltered transponder network' },
+              { key: 'airplaneslive', label: 'Airplanes.live', desc: 'Community aggregator (requires access/proxy)' },
               { key: 'opensky', label: 'OpenSky Network', desc: 'Global academic and crowdsourced transponder sensors' },
             ].map(api => {
               const isEnabled = state.enabledAPIs?.[api.key];

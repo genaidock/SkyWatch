@@ -18,11 +18,14 @@ const initialState = {
   alerts: [],
   enabledAPIs: {
     adsblol: true,
+    adsbfi: true,
+    airplaneslive: false,
     opensky: true,
     airlabs: false,
   },
   apiKeys: {
     airLabs: '',
+    airplanesLiveKey: '',
   },
   apiKeysConfigured: {
     airLabs: false,
@@ -362,7 +365,9 @@ export function FlightProvider({ children }) {
         else if (sq === '7600') { label = 'Radio Failure'; alertCategory = 'emergency'; }
         else if (sq === '7500') { label = 'Hijacking'; alertCategory = 'emergency'; }
         else if (f.isHeli) { label = 'Helicopter'; alertCategory = 'helicopter'; }
-        else if (category === 'military') { label = 'Military Aircraft'; }
+        else if (category === 'military') {
+          label = f.operator ? `Military (${f.operator})` : (f.branch ? `Military (${f.branch})` : 'Military Aircraft');
+        }
         else if (category === 'private') { label = 'Private Jet / VIP'; }
         else if (category === 'cargo') { label = 'Cargo Freighter'; }
         if (label) {

@@ -33,6 +33,8 @@ export interface Flight {
   category?: 'civil' | 'cargo' | 'military' | 'private' | 'helicopter' | null;
   branch?: string;
   isMilitary?: boolean;
+  isGov?: boolean;
+  operator?: string;
   distKm: number;
   from: Airport;
   to: Airport;

@@ -3,6 +3,7 @@ import { getRedis, getApiKeys, rateLimit } from '@/lib/redis';
 import {
   parseAirplanesLive,
   parseADSBLol,
+  parseADSBFi,
   parseAirLabs,
   parseOpenSky,
   uniqueFlights,
@@ -99,6 +100,8 @@ export async function GET(request) {
 
   const enabledAPIs = {
     adsblol: searchParams.get('adsblol') !== 'false',
+    adsbfi: searchParams.get('adsbfi') !== 'false',
+    airplaneslive: searchParams.get('airplaneslive') === 'true',
     opensky: searchParams.get('opensky') !== 'false',
     airlabs: searchParams.get('airlabs') === 'true',
   };
@@ -121,6 +124,26 @@ export async function GET(request) {
       fetchWithTimeout(`https://api.adsb.lol/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => d ? parseADSBLol(d, lat, lon, radiusKm, 'ADS-B.lol') : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.adsbfi) {
+    fetchers.push(
+      fetchWithTimeout(`https://opendata.adsb.fi/api/v2/lat/${latF}/lon/${lonF}/dist/${distNm}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseADSBFi(d, lat, lon, radiusKm) : [])
+        .catch(() => [])
+    );
+  }
+
+  if (enabledAPIs.airplaneslive) {
+    const liveHeaders = keys.airplanesLiveKey ? { 'api-auth': keys.airplanesLiveKey } : {};
+    const liveUrl = keys.airplanesLiveUrl || `https://api.airplanes.live/v2/point/${latF}/${lonF}/${distNm}`;
+    fetchers.push(
+      fetchWithTimeout(liveUrl, FETCH_TIMEOUT, liveHeaders)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d ? parseAirplanesLive(d, lat, lon, radiusKm) : [])
         .catch(() => [])
     );
   }

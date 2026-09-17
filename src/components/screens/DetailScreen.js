@@ -113,7 +113,7 @@ export default function DetailScreen({ onBack }) {
             </span>
             {f.category === 'military' && (
               <span className="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono rounded-md font-bold">
-                {f.branch || 'MILITARY'}
+                {f.operator ? `${f.operator}` : (f.branch || 'MILITARY')}
               </span>
             )}
             {(f.category === 'helicopter' || f.isHeli) && (
@@ -187,6 +187,12 @@ export default function DetailScreen({ onBack }) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
+            {f.operator && (
+              <div className="col-span-2 bg-surface border border-red-500/30 rounded-2xl p-3 shadow-sm">
+                <div className="text-[10px] text-red-400 uppercase tracking-[0.32em] mb-1 font-bold">Tactical / State Operator</div>
+                <div className="text-sm font-mono font-bold text-text">{f.operator}</div>
+              </div>
+            )}
             <DetailItem label="From" value={f.from?.code && f.from?.code !== '—' ? `${f.from.code} · ${f.from.city}` : 'Not Available'} />
             <DetailItem label="To" value={f.to?.code && f.to?.code !== '—' ? `${f.to.code} · ${f.to.city}` : 'Not Available'} />
             <div className="bg-surface border border-neutral rounded-2xl p-3 shadow-sm">
